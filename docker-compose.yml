@@ -1,0 +1,7 @@
+services:
+  app:
+    build:
+      context: .
+    ports:
+      - 0.0.0.0:6666:6666
+    # command: sleep infinity
