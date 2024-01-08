@@ -50,6 +50,37 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 	authenticator := createAuthenticator(cfg)
 
 	return func(server websocket.Server) {
+		server.OnError(func(conn conn.Conn, err error) error {
+			fmt.Println("on error:", err)
+
+			if conn != nil {
+				logger.Errorf("[ws][id: %s] Error: %s", conn.ID(), err)
+			} else {
+				logger.Errorf("[ws][id: none] Error: %s", err)
+			}
+			return nil
+		})
+
+		server.OnClose(func(conn conn.Conn, code int, message string) error {
+			logger.Infof("[ws][id: %s] Close (code: %d, message: %s)", conn.ID(), code, message)
+
+			data, ok := conn.Get("state").(*ConnData)
+			if !ok {
+				return fmt.Errorf("failed to get state")
+			}
+
+			if data.Cmd != nil && !data.Stopped {
+				if !cfg.IsCommandCancelOnCloseDisable {
+					data.IsKilledByClose = true
+					if data.Cmd != nil {
+						data.Cmd.Cancel()
+					}
+				}
+			}
+
+			return nil
+		})
+
 		server.OnConnect(func(conn conn.Conn) error {
 			data := &ConnData{}
 			if cfg.ClientID == "" && cfg.ClientSecret == "" && cfg.AuthService == "" {
@@ -72,26 +103,6 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 			conn.Set("state", data)
 
 			logger.Debugf("[ws][id: %s] connect", conn.ID())
-			return nil
-		})
-
-		server.OnClose(func(conn conn.Conn, code int, message string) error {
-			logger.Infof("[ws][id: %s] Close (code: %d, message: %s)", conn.ID(), code, message)
-
-			data, ok := conn.Get("state").(*ConnData)
-			if !ok {
-				return fmt.Errorf("failed to get state")
-			}
-
-			if data.Cmd != nil && !data.Stopped {
-				if !cfg.IsCommandCancelOnCloseDisable {
-					data.IsKilledByClose = true
-					if data.Cmd != nil {
-						data.Cmd.Cancel()
-					}
-				}
-			}
-
 			return nil
 		})
 
