@@ -39,6 +39,8 @@ type Config struct {
 	WorkDir string `config:"workdir"`
 	//
 	IsAutoCleanWorkDir bool `config:"is_auto_clean_workdir"`
+	//
+	IsCommandCancelOnCloseDisable bool `config:"is_command_cancel_on_close_disable"`
 
 	// Terminal
 	TerminalEnabled     bool   `config:"terminal_enabled"`

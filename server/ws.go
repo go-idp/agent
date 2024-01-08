@@ -84,9 +84,11 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 			}
 
 			if data.Cmd != nil && !data.Stopped {
-				data.IsKilledByClose = true
-				if data.Cmd != nil {
-					data.Cmd.Cancel()
+				if !cfg.IsCommandCancelOnCloseDisable {
+					data.IsKilledByClose = true
+					if data.Cmd != nil {
+						data.Cmd.Cancel()
+					}
 				}
 			}
 
