@@ -242,10 +242,6 @@ func (c *client) Output(command *entities.Command) (response string, err error) 
 		return strings.TrimSpace(responseBuf.String()), nil
 	}
 
-	if err = c.Close(); err != nil {
-		return
-	}
-
 	return strings.TrimSpace(responseBuf.String()), nil
 }
 
