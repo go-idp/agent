@@ -70,7 +70,7 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 			}
 
 			if data.Cmd != nil && !data.Stopped {
-				if !cfg.IsCommandCancelOnCloseDisable {
+				if cfg.IsCommandCancelOnCloseEnable {
 					data.IsKilledByClose = true
 					if data.Cmd != nil {
 						data.Cmd.Cancel()

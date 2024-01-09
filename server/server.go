@@ -40,7 +40,7 @@ type Config struct {
 	//
 	IsAutoCleanWorkDir bool `config:"is_auto_clean_workdir"`
 	//
-	IsCommandCancelOnCloseDisable bool `config:"is_command_cancel_on_close_disable"`
+	IsCommandCancelOnCloseEnable bool `config:"is_command_cancel_on_close_enable"`
 
 	// Terminal
 	TerminalEnabled     bool   `config:"terminal_enabled"`

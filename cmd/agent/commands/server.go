@@ -74,9 +74,9 @@ func RegistryServer(app *cli.MultipleProgram) {
 				EnvVars: []string{"CAAS_AUTO_CLEAN_USER_WORKDIR"},
 			},
 			&cli.BoolFlag{
-				Name:    "disable-command-cancel-on-close",
-				Usage:   "Disable command cancel on close, default: false",
-				EnvVars: []string{"CAAS_DISABLE_COMMAND_CANCEL_ON_CLOSE"},
+				Name:    "enable-command-cancel-on-close",
+				Usage:   "Enable command cancel on close, default: false",
+				EnvVars: []string{"CAAS_ENABLE_COMMAND_CANCEL_ON_CLOSE"},
 			},
 			// terminal
 			&cli.BoolFlag{
@@ -150,8 +150,8 @@ func RegistryServer(app *cli.MultipleProgram) {
 				cfg.IsAutoCleanWorkDir = ctx.Bool("auto-clean-workdir")
 			}
 
-			if ctx.Bool("disable-command-cancel-on-close") {
-				cfg.IsCommandCancelOnCloseDisable = ctx.Bool("disable-command-cancel-on-close")
+			if ctx.Bool("enable-command-cancel-on-close") {
+				cfg.IsCommandCancelOnCloseEnable = ctx.Bool("enable-command-cancel-on-close")
 			}
 
 			if ctx.Bool("enable-terminal") {
