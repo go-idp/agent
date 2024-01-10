@@ -104,13 +104,11 @@ func (c *client) Connect() (err error) {
 	}
 	logger.Debugf("connecting to %s", u.String())
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	wc, err := websocket.NewClient(func(opt *websocket.ClientOption) {
-		opt.Context = ctx
+		opt.Context = context.Background()
 		opt.Addr = u.String()
 	})
 	if err != nil {
-		cancel()
 		return err
 	}
 
@@ -141,8 +139,6 @@ func (c *client) Connect() (err error) {
 	})
 
 	wc.OnConnect(func(conn websocket.Conn) error {
-		cancel()
-
 		// close
 		go func() {
 			<-c.closeCh
