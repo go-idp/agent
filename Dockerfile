@@ -30,17 +30,11 @@ LABEL MAINTAINER="Zero<tobewhatwewant@gmail.com>"
 
 LABEL org.opencontainers.image.source="https://github.com/go-idp/agent"
 
-ARG VERSION=latest
+COPY --from=builder /build/agent /bin
 
 RUN zmicro update -a
 
 RUN zmicro plugin install eunomia
-
-ENV MODE=production
-
-COPY --from=builder /build/agent /bin
-
-RUN agent --version
 
 EXPOSE 8838
 
