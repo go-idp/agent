@@ -36,6 +36,8 @@ RUN zmicro update -a
 
 RUN zmicro plugin install eunomia
 
+RUN zmicro package install rsync
+
 EXPOSE 8838
 
 CMD agent server

@@ -30,13 +30,13 @@ LABEL MAINTAINER="Zero<tobewhatwewant@gmail.com>"
 
 LABEL org.opencontainers.image.source="https://github.com/go-idp/agent"
 
-
-
 COPY --from=builder /build/agent /bin
 
 RUN zmicro update -a
 
 RUN zmicro plugin install eunomia
+
+RUN zmicro package install rsync
 
 EXPOSE 8838
 
