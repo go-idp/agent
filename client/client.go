@@ -66,7 +66,9 @@ type client struct {
 	//
 	messageCh chan []byte
 	//
-	authCh chan struct{}
+	isAuthenticated bool
+	authErrCh       chan error
+	authDoneCh      chan struct{}
 }
 
 // New creates a new caas client
@@ -92,8 +94,11 @@ func New(cfg *Config) Client {
 		stderr:   stderr,
 		//
 		messageCh: make(chan []byte),
-		authCh:    make(chan struct{}),
 		closeCh:   make(chan struct{}),
+		//
+		isAuthenticated: false,
+		authErrCh:       make(chan error),
+		authDoneCh:      make(chan struct{}),
 	}
 }
 
@@ -113,6 +118,10 @@ func (c *client) Connect() (err error) {
 	}
 
 	wc.OnClose(func(conn websocket.Conn, code int, message string) error {
+		if !c.isAuthenticated {
+			return nil
+		}
+
 		c.stderr.Write([]byte(fmt.Sprintf("connection closed from server: %s\n", message)))
 		c.exitCode <- 1
 		return nil
@@ -127,10 +136,9 @@ func (c *client) Connect() (err error) {
 		case entities.MessageCommandExitCode:
 			c.exitCode <- int(message[1])
 		case entities.MessageAuthResponseFailure:
-			c.stderr.Write(message[1:])
-			c.exitCode <- 1
+			c.authErrCh <- fmt.Errorf("%s", message[1:])
 		case entities.MessageAuthResponseSuccess:
-			c.authCh <- struct{}{}
+			c.authErrCh <- nil
 		default:
 			logger.Errorf("unknown message type: %d", message[0])
 		}
@@ -139,9 +147,13 @@ func (c *client) Connect() (err error) {
 	})
 
 	wc.OnConnect(func(conn websocket.Conn) error {
+		ctx, cancel := context.WithCancel(conn.Context())
+
 		// close
 		go func() {
 			<-c.closeCh
+
+			cancel()
 			conn.Close()
 		}()
 
@@ -155,24 +167,29 @@ func (c *client) Connect() (err error) {
 			message, err := json.Marshal(authRequest)
 			if err != nil {
 				logger.Errorf("failed to marshal auth request: %s", err)
+				return
 			}
+
 			err = conn.WriteTextMessage(append([]byte{entities.MessageAuthRequest}, message...))
 			if err != nil {
 				logger.Errorf("failed to send auth request: %s", err)
 			}
 		}()
 
-		<-c.authCh
+		<-c.authDoneCh
 
 		// heart beat
 		go func() {
 			for {
-				time.Sleep(3 * time.Second)
-
-				logger.Debugf("ping")
-				if err := conn.WriteTextMessage([]byte{entities.MessagePing}); err != nil {
-					logger.Debugf("failed to send ping: %s", err)
+				select {
+				case <-ctx.Done():
 					return
+				case <-time.After(3 * time.Second):
+					logger.Debugf("ping")
+					if err := conn.WriteTextMessage([]byte{entities.MessagePing}); err != nil {
+						logger.Errorf("failed to send ping: %s", err)
+						return
+					}
 				}
 			}
 		}()
@@ -181,6 +198,8 @@ func (c *client) Connect() (err error) {
 		go func() {
 			for {
 				select {
+				case <-ctx.Done():
+					return
 				case msg := <-c.messageCh:
 					if err := conn.WriteTextMessage(msg); err != nil {
 						logger.Errorf("failed to send message: %s", err)
@@ -196,6 +215,12 @@ func (c *client) Connect() (err error) {
 	if err := wc.Connect(); err != nil {
 		return err
 	}
+
+	if err := <-c.authErrCh; err != nil {
+		return err
+	}
+	c.authDoneCh <- struct{}{}
+	c.isAuthenticated = true
 
 	return
 }
