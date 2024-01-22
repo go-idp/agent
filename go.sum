@@ -167,8 +167,8 @@ github.com/go-zoox/terminal v1.6.11/go.mod h1:pAsZLT7WHbsrwSe229gxFE0XFZhCke5Qe3
 github.com/go-zoox/testify v1.0.2 h1:G5sQ3xm0uwCuytnMhgnqZ5BItCt2DN3n2wLBqlIJEWA=
 github.com/go-zoox/uuid v0.0.1 h1:txqmDavRTq68gzzqWfJQLorFyUp9a7M2lmq2KcwPGPA=
 github.com/go-zoox/uuid v0.0.1/go.mod h1:0/F4LdfLqFdyqOf7aXoiYXRkXHU324JQ5DZEytXYBPM=
-github.com/go-zoox/websocket v1.0.2 h1:DfanbRcqG1zIbcM/crgKxwTnxLRBG9nCzx5XEB8N0WY=
-github.com/go-zoox/websocket v1.0.2/go.mod h1:3HlHaYANU3cUfj2WMrq5tt9moT0GR/3sYvLEd2SIp2c=
+github.com/go-zoox/websocket v1.0.3 h1:iHl0kZ3Mzapj+Q5syMgR6LIRGK2wix34oy73Giu4a8g=
+github.com/go-zoox/websocket v1.0.3/go.mod h1:3HlHaYANU3cUfj2WMrq5tt9moT0GR/3sYvLEd2SIp2c=
 github.com/go-zoox/zoox v1.2.19/go.mod h1:xk3S3L58ugJIDyuZMCYrj3qIGLSxddbkARwTRkpxPVE=
 github.com/go-zoox/zoox v1.13.8 h1:eVNlDHp+RYeVakubHm8+0ESoCehD4ZEpFo3f1BdPJBA=
 github.com/go-zoox/zoox v1.13.8/go.mod h1:ps9xBfcoSwduS4M/kDp8NQZJRG9Uk715rc0EgyfLC74=

@@ -186,7 +186,7 @@ func (c *client) Connect() (err error) {
 					case <-ctx.Done():
 						return
 					case <-time.After(3 * time.Second):
-						logger.Debugf("ping")
+						// logger.Debugf("ping")
 						if err := conn.WriteTextMessage([]byte{entities.MessagePing}); err != nil {
 							logger.Errorf("failed to send ping: %s", err)
 							return
