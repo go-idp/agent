@@ -11,6 +11,7 @@ import (
 	"github.com/go-zoox/websocket"
 	"github.com/go-zoox/zoox"
 	"github.com/go-zoox/zoox/defaults"
+	"github.com/go-zoox/zoox/middleware"
 )
 
 const DefaultShell = "sh"
@@ -174,6 +175,8 @@ func New(cfg *Config) Server {
 
 func (s *server) Run() error {
 	app := defaults.Application()
+
+	app.Use(middleware.Prometheus())
 
 	wsServer, err := websocket.NewServer()
 	if err != nil {
