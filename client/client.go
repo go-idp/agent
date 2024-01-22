@@ -176,37 +176,39 @@ func (c *client) Connect() (err error) {
 			}
 		}()
 
-		<-c.authDoneCh
-
-		// heart beat
 		go func() {
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				case <-time.After(3 * time.Second):
-					logger.Debugf("ping")
-					if err := conn.WriteTextMessage([]byte{entities.MessagePing}); err != nil {
-						logger.Errorf("failed to send ping: %s", err)
+			<-c.authDoneCh
+
+			// heart beat
+			go func() {
+				for {
+					select {
+					case <-ctx.Done():
 						return
+					case <-time.After(3 * time.Second):
+						logger.Debugf("ping")
+						if err := conn.WriteTextMessage([]byte{entities.MessagePing}); err != nil {
+							logger.Errorf("failed to send ping: %s", err)
+							return
+						}
 					}
 				}
-			}
-		}()
+			}()
 
-		// send message
-		go func() {
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				case msg := <-c.messageCh:
-					if err := conn.WriteTextMessage(msg); err != nil {
-						logger.Errorf("failed to send message: %s", err)
+			// send message
+			go func() {
+				for {
+					select {
+					case <-ctx.Done():
 						return
+					case msg := <-c.messageCh:
+						if err := conn.WriteTextMessage(msg); err != nil {
+							logger.Errorf("failed to send message: %s", err)
+							return
+						}
 					}
 				}
-			}
+			}()
 		}()
 
 		return nil
