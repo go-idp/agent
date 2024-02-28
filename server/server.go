@@ -229,7 +229,7 @@ func (s *server) Run() error {
 		})
 	}
 
-	app.Post("/api", func(ctx *zoox.Context) {
+	app.Post("/exec", func(ctx *zoox.Context) {
 		if s.cfg.ClientID == "" && s.cfg.ClientSecret == "" {
 			ctx.Next()
 			return
