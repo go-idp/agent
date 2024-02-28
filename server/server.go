@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/go-idp/agent"
 	"github.com/go-idp/agent/entities"
 	"github.com/go-zoox/fs"
 	"github.com/go-zoox/logger"
@@ -227,6 +228,14 @@ func (s *server) Run() error {
 			})
 		})
 	}
+
+	app.Get("/", func(ctx *zoox.Context) {
+		ctx.JSON(200, zoox.H{
+			"title":       "idp agent",
+			"description": "the agent of idp",
+			"version":     agent.Version,
+		})
+	})
 
 	return app.Run(fmt.Sprintf("0.0.0.0:%d", s.cfg.Port))
 }
