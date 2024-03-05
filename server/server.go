@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-idp/agent"
 	"github.com/go-idp/agent/entities"
+	"github.com/go-zoox/chalk"
 	"github.com/go-zoox/fs"
 	"github.com/go-zoox/logger"
 	terminal "github.com/go-zoox/terminal/server"
@@ -257,6 +258,17 @@ func (s *server) Run() error {
 			"version":     agent.Version,
 		})
 	})
+
+	app.SetBanner(fmt.Sprintf(`
+   _______  ___    ___                __ 
+  /  _/ _ \/ _ \  / _ |___ ____ ___  / /_
+ _/ // // / ___/ / __ / _ '/ -_) _ \/ __/
+/___/____/_/    /_/ |_\_, /\__/_//_/\__/ 
+                     /___/                  %s
+
+____________________________________O/_______
+                                    O\
+`, chalk.Green("v"+agent.Version)))
 
 	return app.Run(fmt.Sprintf("0.0.0.0:%d", s.cfg.Port))
 }

@@ -3,6 +3,7 @@ module github.com/go-idp/agent
 go 1.20
 
 require (
+	github.com/go-zoox/chalk v1.0.2
 	github.com/go-zoox/cli v1.3.8
 	github.com/go-zoox/command v1.4.7
 	github.com/go-zoox/core-utils v1.3.9
@@ -40,7 +41,6 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-redis/redis/v8 v8.11.5 // indirect
 	github.com/go-zoox/cache v1.0.7 // indirect
-	github.com/go-zoox/chalk v1.0.2 // indirect
 	github.com/go-zoox/commands-as-a-service v1.7.11 // indirect
 	github.com/go-zoox/compress v1.0.1 // indirect
 	github.com/go-zoox/concurrency v1.2.0 // indirect
