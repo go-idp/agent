@@ -15,7 +15,7 @@ require (
 	github.com/go-zoox/terminal v1.6.11
 	github.com/go-zoox/uuid v0.0.1
 	github.com/go-zoox/websocket v1.0.5
-	github.com/go-zoox/zoox v1.14.14
+	github.com/go-zoox/zoox v1.14.16
 )
 
 require (
