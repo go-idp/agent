@@ -78,13 +78,6 @@ func RegistryServer(app *cli.MultipleProgram) {
 				Usage:   "Enable command cancel on close, default: false",
 				EnvVars: []string{"CAAS_ENABLE_COMMAND_CANCEL_ON_CLOSE"},
 			},
-			// terminal
-			&cli.BoolFlag{
-				Name:    "enable-terminal",
-				Usage:   "Enable terminal, default: false",
-				EnvVars: []string{"CAAS_ENABLE_TERMINAL"},
-				Value:   true,
-			},
 			&cli.StringFlag{
 				Name:    "terminal-path",
 				Usage:   "specify terminal path",
@@ -152,10 +145,6 @@ func RegistryServer(app *cli.MultipleProgram) {
 
 			if ctx.Bool("enable-command-cancel-on-close") {
 				cfg.IsCommandCancelOnCloseEnable = ctx.Bool("enable-command-cancel-on-close")
-			}
-
-			if ctx.Bool("enable-terminal") {
-				cfg.TerminalEnabled = ctx.Bool("enable-terminal")
 			}
 
 			if ctx.String("terminal-path") != "" {

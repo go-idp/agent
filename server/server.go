@@ -46,7 +46,6 @@ type Config struct {
 	IsCommandCancelOnCloseEnable bool `config:"is_command_cancel_on_close_enable"`
 
 	// Terminal
-	TerminalEnabled     bool   `config:"terminal_enabled"`
 	TerminalPath        string `config:"terminal_path"`
 	TerminalShell       string `config:"terminal_shell"`
 	TerminalDriver      string `config:"terminal_driver"`
@@ -191,7 +190,7 @@ func (s *server) Run() error {
 		opt.Server = wsServer
 	})
 
-	if s.cfg.TerminalEnabled {
+	{ // Web Terminal
 		server, err := terminal.Serve(&terminal.Config{
 			Shell:       s.cfg.TerminalShell,
 			Driver:      s.cfg.TerminalDriver,
@@ -204,7 +203,7 @@ func (s *server) Run() error {
 			return fmt.Errorf("failed to create terminal server: %s", err)
 		}
 
-		app.WebSocket(s.cfg.TerminalPath, func(opt *zoox.WebSocketOption) {
+		app.WebSocket("/terminal", func(opt *zoox.WebSocketOption) {
 			opt.Server = server
 
 			opt.Middlewares = append(opt.Middlewares, func(ctx *zoox.Context) {
