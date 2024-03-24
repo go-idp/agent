@@ -170,7 +170,7 @@ func retrieveCommandLogSSEAPI(cfg *Config) func(ctx *zoox.Context) {
 					return
 				}
 
-				ctx.SSE().Event("log", command.Log.Pop().Message)
+				ctx.SSE().Event("message", command.Log.Pop().String())
 
 				time.Sleep(1 * time.Second)
 			}
@@ -279,7 +279,7 @@ func getLatestCommandLogSSEAPI(cfg *Config) func(ctx *zoox.Context) {
 					return
 				}
 
-				ctx.SSE().Event("log", command.Log.Pop().Message)
+				ctx.SSE().Event("message", command.Log.Pop().String())
 
 				time.Sleep(1 * time.Second)
 			}

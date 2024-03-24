@@ -1,6 +1,7 @@
 package command
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"time"
@@ -52,9 +53,19 @@ type State struct {
 }
 
 type Log struct {
-	ID        int                `json:"id"`
-	Message   string             `json:"message"`
-	Timestamp *datetime.DateTime `json:"timestamp"`
+	ID      int    `json:"id"`
+	Message string `json:"message"`
+	// Timestamp in milliseconds
+	TimestampInMS int64 `json:"ts"`
+}
+
+func (l Log) String() string {
+	bytes, err := json.Marshal(l)
+	if err != nil {
+		return fmt.Sprintf("failed to marshal command log in server/data/command: %s", err)
+	}
+
+	return string(bytes)
 }
 
 type Config struct {
@@ -140,9 +151,9 @@ func (c *Command) Run() error {
 	logWriter := gzio.WriterWrapFunc(func(p []byte) (n int, err error) {
 		// fmt.Println("logWriter:", string(p))
 		c.Log.Push(Log{
-			ID:        line.Get(),
-			Message:   string(p),
-			Timestamp: datetime.Now(),
+			ID:            line.Get(),
+			Message:       string(p),
+			TimestampInMS: datetime.Now().UnixMilli(),
 		})
 
 		line.Inc(1)
