@@ -86,7 +86,7 @@ func createCommandAPI(cfg *Config) func(ctx *zoox.Context) {
 		go func() {
 			err = dc.Run()
 			if err != nil {
-				fmt.Printf("[createCommandAPI] failed to run command: %s", err)
+				fmt.Printf("[createCommandAPI] failed to run command: %s\n", err)
 			}
 		}()
 
@@ -119,7 +119,6 @@ func retvieveCommandAPI(cfg *Config) func(ctx *zoox.Context) {
 		}
 
 		commandX := commandsMap.Get(id)
-		fmt.Printf("commandX: %s - %s - 666 - %v- %#v", commandX, id, commandsMap.Has(id), commandsMap.ToMap())
 		if commandX == nil {
 			ctx.Fail(nil, 404, "command not found")
 			return
