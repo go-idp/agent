@@ -6,7 +6,7 @@ require (
 	github.com/go-zoox/chalk v1.0.2
 	github.com/go-zoox/cli v1.3.8
 	github.com/go-zoox/command v1.5.3
-	github.com/go-zoox/core-utils v1.3.9
+	github.com/go-zoox/core-utils v1.3.10
 	github.com/go-zoox/datetime v1.3.0
 	github.com/go-zoox/fetch v1.8.1
 	github.com/go-zoox/fs v1.3.14
