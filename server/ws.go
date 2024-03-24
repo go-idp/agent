@@ -204,6 +204,10 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 							c.Command.Timeout = cfg.Timeout * 1000
 						}
 
+						if c.Command.Shell == "" {
+							c.Command.Shell = cfg.Shell
+						}
+
 						// fix workdir
 						if c.Command.WorkDirBase == "" {
 							c.Command.WorkDirBase = cfg.WorkDir
