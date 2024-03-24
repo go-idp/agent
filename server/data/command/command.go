@@ -53,8 +53,8 @@ type State struct {
 }
 
 type Log struct {
-	ID      int    `json:"id"`
-	Message string `json:"message"`
+	ID  int    `json:"id"`
+	Log string `json:"log"`
 	// Timestamp in milliseconds
 	TimestampInMS int64 `json:"ts"`
 }
@@ -152,7 +152,7 @@ func (c *Command) Run() error {
 		// fmt.Println("logWriter:", string(p))
 		c.Log.Push(Log{
 			ID:            line.Get(),
-			Message:       string(p),
+			Log:           string(p),
 			TimestampInMS: datetime.Now().UnixMilli(),
 		})
 
