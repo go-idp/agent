@@ -86,10 +86,9 @@ func New(opts ...Option) (*Command, error) {
 }
 
 func (c *Command) Run() error {
-	c.State.Status = "running"
-
 	c.State = &State{
 		StartedAt: datetime.Now(),
+		Status:    "running",
 	}
 	c.Log = safe.NewList[Log](func(lc *safe.ListConfig) {
 		lc.Capacity = 10000
