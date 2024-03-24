@@ -21,8 +21,10 @@ import (
 // Client is the interface of caas client
 type Client interface {
 	Connect() error
-	Exec(command *entities.Command) error
 	Close() error
+	//
+	Exec(command *entities.Command) error
+	Cancel() error
 	//
 	Output(command *entities.Command) (response string, err error)
 	//
@@ -139,6 +141,8 @@ func (c *client) Connect() (err error) {
 			c.authErrCh <- fmt.Errorf("%s", message[1:])
 		case entities.MessageAuthResponseSuccess:
 			c.authErrCh <- nil
+		case entities.MessageCommandCancelResponse:
+			c.stderr.Write([]byte("command canceled\n"))
 		default:
 			logger.Errorf("unknown message type: %d", message[0])
 		}
@@ -250,6 +254,22 @@ func (c *client) Exec(command *entities.Command) error {
 	if exitCode == 0 {
 		return nil
 	}
+
+	return &ExitError{
+		ExitCode: exitCode,
+	}
+}
+
+func (c *client) Cancel() error {
+	c.messageCh <- []byte{entities.MessageCommandCancelRequest}
+
+	exitCode := <-c.exitCode
+
+	if exitCode == 0 {
+		return nil
+	}
+
+	close(c.exitCode)
 
 	return &ExitError{
 		ExitCode: exitCode,
