@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/go-idp/agent"
 	"github.com/go-idp/agent/entities"
+	"github.com/go-zoox/chalk"
 	"github.com/go-zoox/fs"
 	"github.com/go-zoox/logger"
 	terminal "github.com/go-zoox/terminal/server"
@@ -44,7 +46,6 @@ type Config struct {
 	IsCommandCancelOnCloseEnable bool `config:"is_command_cancel_on_close_enable"`
 
 	// Terminal
-	TerminalEnabled     bool   `config:"terminal_enabled"`
 	TerminalPath        string `config:"terminal_path"`
 	TerminalShell       string `config:"terminal_shell"`
 	TerminalDriver      string `config:"terminal_driver"`
@@ -189,7 +190,7 @@ func (s *server) Run() error {
 		opt.Server = wsServer
 	})
 
-	if s.cfg.TerminalEnabled {
+	{ // Web Terminal
 		server, err := terminal.Serve(&terminal.Config{
 			Shell:       s.cfg.TerminalShell,
 			Driver:      s.cfg.TerminalDriver,
@@ -202,7 +203,7 @@ func (s *server) Run() error {
 			return fmt.Errorf("failed to create terminal server: %s", err)
 		}
 
-		app.WebSocket(s.cfg.TerminalPath, func(opt *zoox.WebSocketOption) {
+		app.WebSocket("/terminal", func(opt *zoox.WebSocketOption) {
 			opt.Server = server
 
 			opt.Middlewares = append(opt.Middlewares, func(ctx *zoox.Context) {
@@ -227,6 +228,46 @@ func (s *server) Run() error {
 			})
 		})
 	}
+
+	app.Post("/exec", func(ctx *zoox.Context) {
+		if s.cfg.ClientID == "" && s.cfg.ClientSecret == "" {
+			ctx.Next()
+			return
+		}
+
+		user, pass, ok := ctx.Request.BasicAuth()
+		if !ok {
+			ctx.Set("WWW-Authenticate", `Basic realm="go-zoox"`)
+			ctx.Status(401)
+			return
+		}
+
+		if !(user == s.cfg.ClientID && pass == s.cfg.ClientSecret) {
+			ctx.Status(401)
+			return
+		}
+
+		ctx.Next()
+	}, createCommandAPI(s.cfg))
+
+	app.Get("/", func(ctx *zoox.Context) {
+		ctx.JSON(200, zoox.H{
+			"title":       "idp agent",
+			"description": "the agent of idp",
+			"version":     agent.Version,
+		})
+	})
+
+	app.SetBanner(fmt.Sprintf(`
+   _______  ___    ___                __ 
+  /  _/ _ \/ _ \  / _ |___ ____ ___  / /_
+ _/ // // / ___/ / __ / _ '/ -_) _ \/ __/
+/___/____/_/    /_/ |_\_, /\__/_//_/\__/ 
+                     /___/                  %s
+
+____________________________________O/_______
+                                    O\
+`, chalk.Green("v"+agent.Version)))
 
 	return app.Run(fmt.Sprintf("0.0.0.0:%d", s.cfg.Port))
 }
