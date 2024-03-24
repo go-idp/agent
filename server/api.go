@@ -83,3 +83,19 @@ func createCommandAPI(cfg *Config) func(ctx *zoox.Context) {
 		})
 	}
 }
+
+func listCommandsAPI(cfg *Config) func(ctx *zoox.Context) {
+	return func(ctx *zoox.Context) {
+		commands := []any{}
+		for _, id := range commandsIDList.Iterator() {
+			if idX, ok := id.(string); ok {
+				commands = append(commands, commandsMap.Get(idX))
+			}
+		}
+
+		ctx.Success(zoox.H{
+			"total": len(commands),
+			"data":  commands,
+		})
+	}
+}

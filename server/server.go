@@ -250,6 +250,31 @@ func (s *server) Run() error {
 		ctx.Next()
 	}, createCommandAPI(s.cfg))
 
+	app.Group("/commands", func(group *zoox.RouterGroup) {
+		group.Use(func(ctx *zoox.Context) {
+			if s.cfg.ClientID == "" && s.cfg.ClientSecret == "" {
+				ctx.Next()
+				return
+			}
+
+			user, pass, ok := ctx.Request.BasicAuth()
+			if !ok {
+				ctx.Set("WWW-Authenticate", `Basic realm="go-zoox"`)
+				ctx.Status(401)
+				return
+			}
+
+			if !(user == s.cfg.ClientID && pass == s.cfg.ClientSecret) {
+				ctx.Status(401)
+				return
+			}
+
+			ctx.Next()
+		})
+
+		group.Get("/", listCommandsAPI(s.cfg))
+	})
+
 	app.Get("/", func(ctx *zoox.Context) {
 		ctx.JSON(200, zoox.H{
 			"title":       "idp agent",
