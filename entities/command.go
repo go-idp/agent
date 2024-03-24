@@ -7,6 +7,8 @@ type Command struct {
 	Environment map[string]string `json:"environment"`
 	WorkDirBase string            `json:"workdirbase"`
 	//
+	Shell string `json:"shell"`
+	//
 	User string `json:"user"`
 	//
 	Engine     string  `json:"engine"`
@@ -16,4 +18,6 @@ type Command struct {
 	Platform   string  `json:"platform"`
 	Network    string  `json:"network"`
 	Privileged bool    `json:"privileged"`
+	// Timeout is the timeout of command, in milliseconds
+	Timeout int64 `json:"timeout"`
 }

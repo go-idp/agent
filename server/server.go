@@ -272,11 +272,19 @@ func (s *server) Run() error {
 			ctx.Next()
 		})
 
+		// latest command
+		group.Get("/latest", getLatestCommandAPI(s.cfg))
+		group.Get("/latest/log", getLatestCommandLogAPI(s.cfg))
+		group.Get("/latest/log/sse", getLatestCommandLogSSEAPI(s.cfg))
+
 		group.Get("/", listCommandsAPI(s.cfg))
 		group.Post("/", createCommandAPI(s.cfg))
 		group.Get("/:id", retvieveCommandAPI(s.cfg))
 
-		// group.Post("/:id/create", createCommandAPI(s.cfg))
+		group.Get("/:id/log", retrieveCommandLogAPI(s.cfg))
+		group.Get("/:id/log/sse", retrieveCommandLogSSEAPI(s.cfg))
+
+		group.Post("/:id/create", createCommandAPI(s.cfg))
 		group.Post("/:id/cancel", cancelCommandAPI(s.cfg))
 
 		// group.Post("/:id/pause", pauseCommandAPI(s.cfg))
@@ -290,6 +298,7 @@ func (s *server) Run() error {
 			"title":       "idp agent",
 			"description": "the agent of idp",
 			"version":     agent.Version,
+			"state":       state,
 		})
 	})
 
