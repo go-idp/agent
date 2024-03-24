@@ -2,12 +2,11 @@ package server
 
 import (
 	"fmt"
-	"net/http"
+	"os"
 	"time"
 
 	"github.com/go-idp/agent/entities"
-	"github.com/go-zoox/command"
-	"github.com/go-zoox/fs"
+	dcommand "github.com/go-idp/agent/server/data/command"
 	"github.com/go-zoox/uuid"
 	"github.com/go-zoox/zoox"
 )
@@ -34,53 +33,65 @@ func createCommandAPI(cfg *Config) func(ctx *zoox.Context) {
 			commandRequest.ID = uuid.V4()
 		}
 
-		cmdCfg, err := cfg.GetCommandConfig(commandRequest.ID, commandRequest)
-		if err != nil {
-			ctx.Fail(err, http.StatusInternalServerError, fmt.Sprintf("failed to get command config: %s", err))
-			return
-		}
+		dc, err := dcommand.New(func(c *dcommand.Config) {
+			c.ID = commandRequest.ID
 
-		cmd, err := command.New(&command.Config{
-			Command:     commandRequest.Script,
-			Shell:       cfg.Shell,
-			WorkDir:     cmdCfg.WorkDir,
-			Environment: commandRequest.Environment,
-			User:        commandRequest.User,
-			Engine:      commandRequest.Engine,
-			Image:       commandRequest.Image,
-			Memory:      commandRequest.Memory,
-			CPU:         commandRequest.CPU,
-			Platform:    commandRequest.Platform,
-			Network:     commandRequest.Network,
-			Privileged:  commandRequest.Privileged,
+			c.Command = commandRequest
+
+			// cfg.Timeout is seconds, but command.Timeout is milliseconds
+			if cfg.Timeout != 0 {
+				c.Command.Timeout = cfg.Timeout * 1000
+			}
+
+			// fix workdir
+			if c.Command.WorkDirBase == "" {
+				c.Command.WorkDirBase = cfg.WorkDir
+			}
+
+			if cfg.Environment != nil {
+				for k, v := range cfg.Environment {
+					c.Command.Environment[k] = v
+				}
+			}
 		})
 		if err != nil {
-			ctx.Fail(err, http.StatusInternalServerError, fmt.Sprintf("failed to create command (1): %s", err))
+			ctx.Fail(fmt.Errorf("failed to create data command: %s", err), 500, "failed to create data command")
 			return
 		}
 
-		cmd.SetStdout(cmdCfg.Log)
-		cmd.SetStderr(cmdCfg.Log)
+		// set listener
+		dc.On("error", func(payload any) {
+			state.Command.Running.Dec(1)
+			state.Command.Error.Inc(1)
+		})
+		dc.On("run", func(payload any) {
+			state.Command.Running.Inc(1)
+		})
+		dc.On("cancel", func(payload any) {
+			state.Command.Running.Dec(1)
+			state.Command.Cancelled.Inc(1)
+		})
+		dc.On("finish", func(payload any) {
+			state.Command.Running.Dec(1)
+			state.Command.Finished.Inc(1)
+		})
 
-		if err := cmd.Run(); err != nil {
-			ctx.Fail(err, http.StatusInternalServerError, fmt.Sprintf("failed to run command: %s", err))
-			return
-		}
+		commandsMap.Set(dc.ID, dc)
+		commandsIDList.LPush(dc.ID)
+		state.Command.Total.Inc(1)
 
-		log, err := fs.ReadFileAsString(cmdCfg.Log.Path)
-		if err != nil {
-			ctx.Fail(err, http.StatusInternalServerError, fmt.Sprintf("failed to read log: %s", err))
-			return
-		}
+		dc.SetStdout(os.Stdout)
+		dc.SetStderr(os.Stderr)
 
-		// @TODO
-		if log[len(log)-1] == '\n' {
-			log = log[:len(log)-1]
-		}
+		go func() {
+			err = dc.Run()
+			if err != nil {
+				fmt.Printf("[createCommandAPI] failed to run command: %s", err)
+			}
+		}()
 
 		ctx.Success(zoox.H{
-			"id":  commandRequest.ID,
-			"log": log,
+			"id": commandRequest.ID,
 		})
 	}
 }
@@ -188,5 +199,91 @@ func cancelCommandAPI(cfg *Config) func(ctx *zoox.Context) {
 		}
 
 		ctx.Success(nil)
+	}
+}
+
+func getLatestCommandAPI(cfg *Config) func(ctx *zoox.Context) {
+	return func(ctx *zoox.Context) {
+		if state.Command.Running.Get() == 0 {
+			ctx.Fail(nil, 200, "no commands running")
+			return
+		}
+
+		for _, id := range commandsIDList.Iterator() {
+			if command := commandsMap.Get(id); command != nil {
+				if command.IsRunning() {
+					ctx.Success(command)
+					return
+				}
+			}
+		}
+	}
+}
+
+func getLatestCommandLogAPI(cfg *Config) func(ctx *zoox.Context) {
+	return func(ctx *zoox.Context) {
+		if state.Command.Running.Get() == 0 {
+			ctx.Fail(nil, 200, "no commands running")
+			return
+		}
+
+		for _, id := range commandsIDList.Iterator() {
+			if command := commandsMap.Get(id); command != nil {
+				if command.IsRunning() {
+					ctx.Success(zoox.H{
+						"log": command.Log,
+					})
+					return
+				}
+			}
+		}
+	}
+}
+
+func getLatestCommandLogSSEAPI(cfg *Config) func(ctx *zoox.Context) {
+	return func(ctx *zoox.Context) {
+		if state.Command.Running.Get() == 0 {
+			ctx.Fail(nil, 200, "no commands running")
+			return
+		}
+
+		commandID := ""
+		for _, id := range commandsIDList.Iterator() {
+			if command := commandsMap.Get(id); command != nil {
+				if command.IsRunning() {
+					commandID = id
+					break
+				}
+			}
+		}
+
+		if commandID == "" {
+			ctx.Fail(nil, 404, "command current is not running")
+			return
+		}
+
+		for {
+			select {
+			case <-ctx.Request.Context().Done():
+				return
+			case <-time.After(10 * time.Minute):
+				// max 10 minutes, avoid memory leak
+				return
+			default:
+				command := commandsMap.Get(commandID)
+				if command == nil {
+					ctx.Fail(nil, 404, "command not found")
+					return
+				}
+
+				if running := command.IsRunning(); !running {
+					return
+				}
+
+				ctx.SSE().Event("log", command.Log.Pop().Message)
+
+				time.Sleep(1 * time.Second)
+			}
+		}
 	}
 }

@@ -8,6 +8,7 @@ require (
 	github.com/go-zoox/command v1.5.3
 	github.com/go-zoox/core-utils v1.4.3
 	github.com/go-zoox/datetime v1.3.1
+	github.com/go-zoox/eventemitter v1.4.0
 	github.com/go-zoox/fetch v1.8.1
 	github.com/go-zoox/fs v1.3.14
 	github.com/go-zoox/logger v1.5.1
@@ -52,7 +53,6 @@ require (
 	github.com/go-zoox/dotenv v1.2.5 // indirect
 	github.com/go-zoox/encoding v1.2.1 // indirect
 	github.com/go-zoox/errors v1.0.2 // indirect
-	github.com/go-zoox/eventemitter v1.4.0 // indirect
 	github.com/go-zoox/gzip v1.0.0 // indirect
 	github.com/go-zoox/headers v1.0.8 // indirect
 	github.com/go-zoox/i18n v1.0.3 // indirect
@@ -117,6 +117,6 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-// replace github.com/go-zoox/datetime => ../../go-zoox/datetime
+replace github.com/go-zoox/core-utils => ../../go-zoox/core-utils
 
 // replace github.com/go-zoox/eventemitter => ../../go-zoox/eventemitter

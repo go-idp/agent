@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"runtime"
 
 	// "os/exec"
 	"strings"
@@ -127,6 +128,13 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 				defer func() {
 					if r := recover(); r != nil {
 						logger.Errorf("[ws][id: %s] receive text message panic => %v", conn.ID(), r)
+
+						// @TODO show panic stack
+						buf := make([]byte, 4096)
+						n := runtime.Stack(buf, false)
+						fmt.Printf("Recovered: %v\n", r)
+						fmt.Printf("Stack trace:\n%s\n", buf[:n])
+
 						conn.WriteTextMessage(append([]byte{entities.MessageCommandStderr}, []byte(fmt.Sprintf("internal server error: %v\n", r))...))
 						conn.WriteTextMessage([]byte{entities.MessageCommandExitCode, byte(1)})
 						return
@@ -211,9 +219,26 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 						return fmt.Errorf("failed to create data command: %s", err)
 					}
 					connState.Cmd = dc
+					// set listener
+					dc.On("error", func(payload any) {
+						state.Command.Running.Dec(1)
+						state.Command.Error.Inc(1)
+					})
+					dc.On("run", func(payload any) {
+						state.Command.Running.Inc(1)
+					})
+					dc.On("cancel", func(payload any) {
+						state.Command.Running.Dec(1)
+						state.Command.Cancelled.Inc(1)
+					})
+					dc.On("finish", func(payload any) {
+						state.Command.Running.Dec(1)
+						state.Command.Finished.Inc(1)
+					})
 
 					commandsMap.Set(dc.ID, dc)
 					commandsIDList.LPush(dc.ID)
+					state.Command.Total.Inc(1)
 					//
 
 					cmdCfg, err := cfg.GetCommandConfig(dc.ID, commandN)

@@ -10,12 +10,15 @@ import (
 	gzio "github.com/go-zoox/core-utils/io"
 	"github.com/go-zoox/core-utils/safe"
 	"github.com/go-zoox/datetime"
+	"github.com/go-zoox/eventemitter"
 	"github.com/go-zoox/fs"
 	"github.com/go-zoox/logger"
 	"github.com/go-zoox/uuid"
 )
 
 type Command struct {
+	event eventemitter.EventEmitter
+
 	ID string `json:"id"`
 
 	Cmd *entities.Command `json:"command"`
@@ -44,6 +47,8 @@ type State struct {
 	IsTimeout       bool `json:"is_timeout"`
 	//
 	Error error `json:"error"`
+	//
+	Status string `json:"status"` // running, cancelled, finished, error
 }
 
 type Log struct {
@@ -75,10 +80,14 @@ func New(opts ...Option) (*Command, error) {
 	return &Command{
 		ID:  opt.ID,
 		Cmd: opt.Command,
+		//
+		event: eventemitter.New(),
 	}, nil
 }
 
 func (c *Command) Run() error {
+	c.State.Status = "running"
+
 	c.State = &State{
 		StartedAt: datetime.Now(),
 	}
@@ -108,7 +117,14 @@ func (c *Command) Run() error {
 		Timeout: time.Duration(c.Cmd.Timeout) * time.Millisecond,
 	})
 	if err != nil {
-		panic(fmt.Errorf("failed to create command (1): %s", err))
+		c.event.Emit("error", fmt.Errorf("failed to run command: %s", err))
+
+		c.State.IsError = true
+		c.State.Status = "error"
+		c.State.Error = err
+		c.State.ErroredAt = datetime.Now()
+
+		return fmt.Errorf("failed to run command: %s", err)
 	}
 
 	// set cmd to context
@@ -138,6 +154,8 @@ func (c *Command) Run() error {
 	cmd.SetStdout(io.MultiWriter(c.stdout, logWriter))
 	cmd.SetStderr(io.MultiWriter(c.stderr, logWriter))
 
+	c.event.Emit("run", c.ID)
+
 	if err := c.cmd.Run(); err != nil {
 		if c.State.IsKilledByClose {
 			logger.Infof("[command] killed by close: %s", c.Cmd.Script)
@@ -149,13 +167,19 @@ func (c *Command) Run() error {
 			return nil
 		}
 
+		c.event.Emit("error", fmt.Errorf("failed to run command: %s", err))
+
 		c.State.IsError = true
+		c.State.Status = "error"
 		c.State.Error = err
 		c.State.ErroredAt = datetime.Now()
 		return fmt.Errorf("failed to run command: %s", err)
 	}
 
+	c.event.Emit("finish", c.ID)
+
 	c.State.IsFinished = true
+	c.State.Status = "finished"
 	c.State.FinishedAt = datetime.Now()
 	return nil
 }
@@ -173,5 +197,19 @@ func (c *Command) Cancel() error {
 		return fmt.Errorf("command is not running, please do Run() first")
 	}
 
+	c.State.IsCancelled = true
+	c.State.Status = "cancelled"
+
+	c.event.Emit("cancel", c.ID)
+
 	return c.cmd.Cancel()
+}
+
+func (c *Command) On(event string, fn func(payload any)) {
+	c.event.On(event, eventemitter.HandleFunc(fn))
+}
+
+// IsRunning returns true if the command is running
+func (c *Command) IsRunning() bool {
+	return !c.State.IsCancelled && !c.State.IsFinished && !c.State.IsError
 }
