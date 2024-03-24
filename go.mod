@@ -6,7 +6,7 @@ require (
 	github.com/go-zoox/chalk v1.0.2
 	github.com/go-zoox/cli v1.3.8
 	github.com/go-zoox/command v1.5.3
-	github.com/go-zoox/core-utils v1.4.3
+	github.com/go-zoox/core-utils v1.4.4
 	github.com/go-zoox/datetime v1.3.1
 	github.com/go-zoox/eventemitter v1.4.0
 	github.com/go-zoox/fetch v1.8.1
@@ -117,6 +117,6 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/go-zoox/core-utils => ../../go-zoox/core-utils
+// replace github.com/go-zoox/core-utils => ../../go-zoox/core-utils
 
 // replace github.com/go-zoox/eventemitter => ../../go-zoox/eventemitter
