@@ -6,16 +6,16 @@ require (
 	github.com/go-zoox/chalk v1.0.2
 	github.com/go-zoox/cli v1.3.8
 	github.com/go-zoox/command v1.5.3
-	github.com/go-zoox/core-utils v1.3.10
-	github.com/go-zoox/datetime v1.3.0
+	github.com/go-zoox/core-utils v1.4.3
+	github.com/go-zoox/datetime v1.3.1
 	github.com/go-zoox/fetch v1.8.1
 	github.com/go-zoox/fs v1.3.14
 	github.com/go-zoox/logger v1.5.1
 	github.com/go-zoox/safe v1.0.1
 	github.com/go-zoox/terminal v1.6.11
 	github.com/go-zoox/uuid v0.0.1
-	github.com/go-zoox/websocket v1.0.5
-	github.com/go-zoox/zoox v1.14.24
+	github.com/go-zoox/websocket v1.0.6
+	github.com/go-zoox/zoox v1.14.25
 )
 
 require (
@@ -117,6 +117,6 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-// replace github.com/go-zoox/websocket => ../../go-zoox/websocket
+// replace github.com/go-zoox/datetime => ../../go-zoox/datetime
 
 // replace github.com/go-zoox/eventemitter => ../../go-zoox/eventemitter

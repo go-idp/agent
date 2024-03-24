@@ -88,9 +88,7 @@ func listCommandsAPI(cfg *Config) func(ctx *zoox.Context) {
 	return func(ctx *zoox.Context) {
 		commands := []any{}
 		for _, id := range commandsIDList.Iterator() {
-			if idX, ok := id.(string); ok {
-				commands = append(commands, commandsMap.Get(idX))
-			}
+			commands = append(commands, commandsMap.Get(id))
 		}
 
 		ctx.Success(zoox.H{
@@ -127,13 +125,12 @@ func cancelCommandAPI(cfg *Config) func(ctx *zoox.Context) {
 			return
 		}
 
-		commandX := commandsMap.Get(id)
-		if commandX == nil {
+		command := commandsMap.Get(id)
+		if command == nil {
 			ctx.Fail(nil, 404, "command not found")
 			return
 		}
 
-		command := commandX.(*CommandWithState)
 		if err := command.Cancel(); err != nil {
 			ctx.Fail(err, 500, fmt.Sprintf("failed to cancel command: %s", err))
 			return

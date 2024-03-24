@@ -10,14 +10,14 @@ import (
 	"time"
 
 	"github.com/go-idp/agent/entities"
-	"github.com/go-zoox/command"
 	"github.com/go-zoox/command/errors"
-	"github.com/go-zoox/core-utils/safe"
 	"github.com/go-zoox/datetime"
 	"github.com/go-zoox/fs"
 	"github.com/go-zoox/logger"
 	"github.com/go-zoox/websocket"
 	"github.com/go-zoox/websocket/conn"
+
+	dcommand "github.com/go-idp/agent/server/data/command"
 )
 
 // WSClientWriter is the writer for websocket client
@@ -36,7 +36,7 @@ func (w WSClientWriter) Write(p []byte) (n int, err error) {
 }
 
 type ConnData struct {
-	Cmd        command.Command
+	Cmd        *dcommand.Command
 	AuthClient *entities.AuthRequest
 	CommandN   *entities.Command
 	//
@@ -49,42 +49,7 @@ type ConnData struct {
 	// IsCancelled bool
 
 	//
-	CommandState *CommandState
-}
-
-type CommandState struct {
-	Stopped         bool `json:"stopped"`
-	IsKilledByClose bool `json:"is_killed_by_close"`
-	IsCancelled     bool `json:"is_cancelled"`
-	IsCompleted     bool `json:"is_completed"`
-	IsError         bool `json:"is_error"`
-	//
-	Error error `json:"error"`
-}
-
-// Commands
-var commandsCapacity = 1000
-var commandsMap = safe.NewMap(func(mc *safe.MapConfig) {
-	mc.Capacity = commandsCapacity
-})
-var commandsIDList = safe.NewList(func(lc *safe.ListConfig) {
-	lc.Capacity = commandsCapacity
-})
-
-type CommandWithState struct {
-	ID      string            `json:"id"`
-	Command *entities.Command `json:"command"`
-	State   *CommandState     `json:"state"`
-	//
-	connData *ConnData
-}
-
-func (c *CommandWithState) Cancel() error {
-	if c.connData == nil {
-		return fmt.Errorf("connData is nil")
-	}
-
-	return c.connData.Cmd.Cancel()
+	// CommandState *CommandState
 }
 
 func createWsService(cfg *Config) func(server websocket.Server) {
@@ -113,8 +78,8 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 					return fmt.Errorf("failed to get state")
 				}
 
-				if data.Cmd != nil && !data.CommandState.Stopped {
-					data.CommandState.IsKilledByClose = true
+				if data.Cmd != nil && !data.Cmd.State.Stopped {
+					data.Cmd.State.IsKilledByClose = true
 
 					// wait 1 second
 					time.Sleep(1 * time.Second)
@@ -133,9 +98,7 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 		})
 
 		server.OnConnect(func(conn conn.Conn) error {
-			data := &ConnData{
-				CommandState: &CommandState{},
-			}
+			data := &ConnData{}
 			if cfg.ClientID == "" && cfg.ClientSecret == "" && cfg.AuthService == "" {
 				data.IsAuthenticated = true
 			}
@@ -220,23 +183,40 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 						return nil
 					}
 
-					// save command
-					cs := &CommandWithState{
-						ID:      commandN.ID,
-						Command: commandN,
-						State:   connState.CommandState,
-						//
-						connData: connState,
+					dc, err := dcommand.New(func(c *dcommand.Config) {
+						c.ID = commandN.ID
+						if c.ID == "" {
+							c.ID = conn.ID()
+						}
+
+						c.Command = commandN
+
+						// cfg.Timeout is seconds, but command.Timeout is milliseconds
+						if cfg.Timeout != 0 {
+							c.Command.Timeout = cfg.Timeout * 1000
+						}
+
+						// fix workdir
+						if c.Command.WorkDirBase == "" {
+							c.Command.WorkDirBase = cfg.WorkDir
+						}
+
+						if cfg.Environment != nil {
+							for k, v := range cfg.Environment {
+								c.Command.Environment[k] = v
+							}
+						}
+					})
+					if err != nil {
+						return fmt.Errorf("failed to create data command: %s", err)
 					}
-					if cs.ID == "" {
-						cs.ID = conn.ID()
-					}
-					commandsMap.Set(cs.ID, cs)
-					commandsIDList.Push(cs.ID)
+					connState.Cmd = dc
+
+					commandsMap.Set(dc.ID, dc)
+					commandsIDList.LPush(dc.ID)
 					//
 
-					id := cs.ID
-					cmdCfg, err := cfg.GetCommandConfig(id, commandN)
+					cmdCfg, err := cfg.GetCommandConfig(dc.ID, commandN)
 					if err != nil {
 						logger.Errorf("failed to get command config: %s", err)
 						conn.WriteTextMessage(append([]byte{entities.MessageCommandStderr}, []byte("internal server error\n")...))
@@ -278,53 +258,51 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 						env = append(env, fmt.Sprintf("%s=%s", k, v))
 					}
 
-					cmd, err := command.New(&command.Config{
-						Command:     commandN.Script,
-						Shell:       cfg.Shell,
-						WorkDir:     cmdCfg.WorkDir,
-						Environment: environment,
-						User:        commandN.User,
-						Engine:      commandN.Engine,
-						Image:       commandN.Image,
-						Memory:      commandN.Memory,
-						CPU:         commandN.CPU,
-						Platform:    commandN.Platform,
-						Network:     commandN.Network,
-						Privileged:  commandN.Privileged,
-					})
-					if err != nil {
-						panic(fmt.Errorf("failed to create command (1): %s", err))
-					}
-					connState.Cmd = cmd
+					// cmd, err := command.New(&command.Config{
+					// 	Command:     commandN.Script,
+					// 	Shell:       cfg.Shell,
+					// 	WorkDir:     cmdCfg.WorkDir,
+					// 	Environment: environment,
+					// 	User:        commandN.User,
+					// 	Engine:      commandN.Engine,
+					// 	Image:       commandN.Image,
+					// 	Memory:      commandN.Memory,
+					// 	CPU:         commandN.CPU,
+					// 	Platform:    commandN.Platform,
+					// 	Network:     commandN.Network,
+					// 	Privileged:  commandN.Privileged,
+					// })
+					// if err != nil {
+					// 	panic(fmt.Errorf("failed to create command (1): %s", err))
+					// }
+					// connState.Cmd = cmd
 
 					// timeout
 					var commandTimeoutTimer *time.Timer
 					if cfg.Timeout != 0 {
 						commandTimeoutTimer = time.AfterFunc(time.Duration(cfg.Timeout)*time.Second, func() {
-							if cmd != nil {
-								cmd.Cancel()
-							}
+							dc.Cancel()
 						})
 					}
 
-					cmd.SetStdout(io.MultiWriter(cmdCfg.Log, &WSClientWriter{Conn: conn, Flag: entities.MessageCommandStdout}))
-					cmd.SetStderr(io.MultiWriter(cmdCfg.Log, &WSClientWriter{Conn: conn, Flag: entities.MessageCommandStderr}))
+					dc.SetStdout(io.MultiWriter(cmdCfg.Log, &WSClientWriter{Conn: conn, Flag: entities.MessageCommandStdout}))
+					dc.SetStderr(io.MultiWriter(cmdCfg.Log, &WSClientWriter{Conn: conn, Flag: entities.MessageCommandStderr}))
 
 					logger.Infof("[command] start to run: %s", commandN.Script)
 					cmdCfg.Script.WriteString(commandN.Script)
 					cmdCfg.Env.WriteString(strings.Join(env, "\n"))
 					cmdCfg.StartAt.WriteString(datetime.Now().Format("YYYY-MM-DD HH:mm:ss"))
-					err = cmd.Run()
+					err = dc.Run()
 					if err != nil {
-						if connState.CommandState.IsKilledByClose {
-							logger.Infof("[command] killed by Close: %s", commandN.Script)
-							return nil
-						}
+						// if connState.Cmd.State.IsKilledByClose {
+						// 	logger.Infof("[command] killed by Close: %s", commandN.Script)
+						// 	return nil
+						// }
 
-						if connState.CommandState.IsCancelled {
-							logger.Infof("[command] cancelled: %s", commandN.Script)
-							return nil
-						}
+						// if connState.Cmd.State.IsCancelled {
+						// 	logger.Infof("[command] cancelled: %s", commandN.Script)
+						// 	return nil
+						// }
 
 						cmdCfg.FailedAt.WriteString(datetime.Now().Format("YYYY-MM-DD HH:mm:ss"))
 						cmdCfg.Error.WriteString(err.Error())
@@ -335,15 +313,15 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 							exitCode = errx.ExitCode()
 						}
 
-						connState.CommandState.IsError = true
-						connState.CommandState.Error = err
+						// connState.Cmd.State.IsError = true
+						// connState.Cmd.State.Error = err
 
 						logger.Errorf("[command] failed to run: %s (err: %v, exit code: %d)", commandN.Script, err, exitCode)
 						conn.WriteTextMessage([]byte{entities.MessageCommandExitCode, byte(exitCode)})
 						return nil
 					}
 
-					connState.CommandState.IsCompleted = true
+					// connState.Cmd.State.IsFinished = true
 
 					cmdCfg.SucceedAt.WriteString(datetime.Now().Format("YYYY-MM-DD HH:mm:ss"))
 					cmdCfg.Status.WriteString("success")
@@ -365,16 +343,16 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 						connState.HeartbeatTimeoutTimer.Stop()
 					}
 
-					connState.CommandState.Stopped = true
+					connState.Cmd.State.Stopped = true
 				case entities.MessageCommandCancelRequest:
 					// 更新状态
-					connState.CommandState.IsCancelled = true
+					connState.Cmd.State.IsCancelled = true
 
 					// wait 1 second
 					time.Sleep(1 * time.Second)
 
 					// if command is running, cancel it
-					if connState.Cmd != nil && !connState.CommandState.Stopped {
+					if connState.Cmd != nil && !connState.Cmd.State.Stopped {
 						connState.Cmd.Cancel()
 					}
 					conn.WriteTextMessage([]byte{entities.MessageCommandCancelResponse})
