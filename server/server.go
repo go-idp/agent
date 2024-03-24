@@ -276,6 +276,9 @@ func (s *server) Run() error {
 		group.Post("/", createCommandAPI(s.cfg))
 		group.Get("/:id", retvieveCommandAPI(s.cfg))
 
+		group.Get("/:id/log", retrieveCommandLogAPI(s.cfg))
+		group.Get("/:id/log/sse", retrieveCommandLogSSEAPI(s.cfg))
+
 		// group.Post("/:id/create", createCommandAPI(s.cfg))
 		group.Post("/:id/cancel", cancelCommandAPI(s.cfg))
 

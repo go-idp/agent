@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/go-idp/agent/entities"
 	"github.com/go-zoox/command"
@@ -114,6 +115,56 @@ func retvieveCommandAPI(cfg *Config) func(ctx *zoox.Context) {
 		}
 
 		ctx.Success(commandX)
+	}
+}
+
+func retrieveCommandLogAPI(cfg *Config) func(ctx *zoox.Context) {
+	return func(ctx *zoox.Context) {
+		id := ctx.Param().Get("id").String()
+		if id == "" {
+			ctx.Fail(fmt.Errorf("id is required"), 400, "id is required")
+			return
+		}
+
+		command := commandsMap.Get(id)
+		if command == nil {
+			ctx.Fail(nil, 404, "command not found")
+			return
+		}
+
+		ctx.Success(zoox.H{
+			"log": command.Log,
+		})
+	}
+}
+
+func retrieveCommandLogSSEAPI(cfg *Config) func(ctx *zoox.Context) {
+	return func(ctx *zoox.Context) {
+		id := ctx.Param().Get("id").String()
+		if id == "" {
+			ctx.Fail(fmt.Errorf("id is required"), 400, "id is required")
+			return
+		}
+
+		for {
+			select {
+			case <-ctx.Request.Context().Done():
+				return
+			case <-time.After(10 * time.Minute):
+				// max 10 minutes, avoid memory leak
+				return
+			default:
+				command := commandsMap.Get(id)
+				if command == nil {
+					ctx.Fail(nil, 404, "command not found")
+					return
+				}
+
+				ctx.SSE().Event("log", command.Log.Pop().Message)
+
+				time.Sleep(1 * time.Second)
+			}
+		}
 	}
 }
 
