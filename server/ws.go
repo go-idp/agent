@@ -64,19 +64,23 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 		server.OnClose(func(conn conn.Conn, code int, message string) error {
 			logger.Infof("[ws][id: %s] Close (code: %d, message: %s)", conn.ID(), code, message)
 
-			data, ok := conn.Get("state").(*ConnData)
-			if !ok {
-				return fmt.Errorf("failed to get state")
-			}
+			// data, ok := conn.Get("state").(*ConnData)
+			// if !ok {
+			// 	return fmt.Errorf("failed to get state")
+			// }
 
-			if data.Cmd != nil && !data.Stopped {
-				if cfg.IsCommandCancelOnCloseEnable {
-					data.IsKilledByClose = true
-					if data.Cmd != nil {
-						data.Cmd.Cancel()
-					}
-				}
-			}
+			// if data.Cmd != nil && !data.Stopped {
+			// 	if cfg.IsCommandCancelOnCloseEnable {
+			// 		data.IsKilledByClose = true
+			// 		if data.Cmd != nil {
+			// 			data.Cmd.Cancel()
+			// 		}
+			// 	}
+			// }
+
+			// if client disconnect, we want to keep the command running until it's done
+			//	which means we don't want to kill the command when client disconnect
+			//	which is used to support idp server (use agent client) redeploy without pain
 
 			return nil
 		})
