@@ -99,3 +99,46 @@ func listCommandsAPI(cfg *Config) func(ctx *zoox.Context) {
 		})
 	}
 }
+
+func retvieveCommandAPI(cfg *Config) func(ctx *zoox.Context) {
+	return func(ctx *zoox.Context) {
+		id := ctx.Param().Get("id").String()
+		if id == "" {
+			ctx.Fail(fmt.Errorf("id is required"), 400, "id is required")
+			return
+		}
+
+		commandX := commandsMap.Get(id)
+		fmt.Printf("commandX: %s - %s - 666 - %v- %#v", commandX, id, commandsMap.Has(id), commandsMap.ToMap())
+		if commandX == nil {
+			ctx.Fail(nil, 404, "command not found")
+			return
+		}
+
+		ctx.Success(commandX)
+	}
+}
+
+func cancelCommandAPI(cfg *Config) func(ctx *zoox.Context) {
+	return func(ctx *zoox.Context) {
+		id := ctx.Param().Get("id").String()
+		if id == "" {
+			ctx.Fail(fmt.Errorf("id is required"), 400, "id is required")
+			return
+		}
+
+		commandX := commandsMap.Get(id)
+		if commandX == nil {
+			ctx.Fail(nil, 404, "command not found")
+			return
+		}
+
+		command := commandX.(*CommandWithState)
+		if err := command.Cancel(); err != nil {
+			ctx.Fail(err, 500, fmt.Sprintf("failed to cancel command: %s", err))
+			return
+		}
+
+		ctx.Success(nil)
+	}
+}

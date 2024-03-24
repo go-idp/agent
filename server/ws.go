@@ -53,13 +53,13 @@ type ConnData struct {
 }
 
 type CommandState struct {
-	Stopped         bool
-	IsKilledByClose bool
-	IsCancelled     bool
-	IsCompleted     bool
-	IsError         bool
+	Stopped         bool `json:"stopped"`
+	IsKilledByClose bool `json:"is_killed_by_close"`
+	IsCancelled     bool `json:"is_cancelled"`
+	IsCompleted     bool `json:"is_completed"`
+	IsError         bool `json:"is_error"`
 	//
-	Error error
+	Error error `json:"error"`
 }
 
 // Commands
@@ -72,9 +72,19 @@ var commandsIDList = safe.NewList(func(lc *safe.ListConfig) {
 })
 
 type CommandWithState struct {
-	ID      string
-	Command *entities.Command
-	State   *CommandState
+	ID      string            `json:"id"`
+	Command *entities.Command `json:"command"`
+	State   *CommandState     `json:"state"`
+	//
+	connData *ConnData
+}
+
+func (c *CommandWithState) Cancel() error {
+	if c.connData == nil {
+		return fmt.Errorf("connData is nil")
+	}
+
+	return c.connData.Cmd.Cancel()
 }
 
 func createWsService(cfg *Config) func(server websocket.Server) {
@@ -215,12 +225,14 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 						ID:      commandN.ID,
 						Command: commandN,
 						State:   connState.CommandState,
+						//
+						connData: connState,
 					}
 					if cs.ID == "" {
 						cs.ID = conn.ID()
 					}
-					commandsMap.Set(commandN.ID, cs)
-					commandsIDList.Push(commandN.ID)
+					commandsMap.Set(cs.ID, cs)
+					commandsIDList.Push(cs.ID)
 					//
 
 					id := cs.ID

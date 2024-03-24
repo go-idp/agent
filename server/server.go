@@ -273,6 +273,16 @@ func (s *server) Run() error {
 		})
 
 		group.Get("/", listCommandsAPI(s.cfg))
+		group.Post("/", createCommandAPI(s.cfg))
+		group.Get("/:id", retvieveCommandAPI(s.cfg))
+
+		// group.Post("/:id/create", createCommandAPI(s.cfg))
+		group.Post("/:id/cancel", cancelCommandAPI(s.cfg))
+
+		// group.Post("/:id/pause", pauseCommandAPI(s.cfg))
+		// group.Post("/:id/resume", resumeCommandAPI(s.cfg))
+
+		// group.Post("/:id/start", startCommandAPI(s.cfg))
 	})
 
 	app.Get("/", func(ctx *zoox.Context) {
