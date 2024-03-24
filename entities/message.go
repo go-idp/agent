@@ -23,3 +23,9 @@ const MessageCommandStderr = '6'
 
 // MessageCommandExitCode is the message for command exit code
 const MessageCommandExitCode = '7'
+
+// MessageCommandCancelRequest is the message for command cancel request
+const MessageCommandCancelRequest = '8'
+
+// MessageCommandCancelResponse is the message for command cancel response
+const MessageCommandCancelResponse = '9'

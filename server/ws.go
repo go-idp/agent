@@ -43,6 +43,8 @@ type ConnData struct {
 	IsKilledByClose            bool
 	AuthenticationTimeoutTimer *time.Timer
 	HeartbeatTimeoutTimer      *time.Timer
+	//
+	IsCancelled bool
 }
 
 func createWsService(cfg *Config) func(server websocket.Server) {
@@ -64,19 +66,28 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 		server.OnClose(func(conn conn.Conn, code int, message string) error {
 			logger.Infof("[ws][id: %s] Close (code: %d, message: %s)", conn.ID(), code, message)
 
-			data, ok := conn.Get("state").(*ConnData)
-			if !ok {
-				return fmt.Errorf("failed to get state")
-			}
+			// enable cancel command when close
+			if cfg.IsCommandCancelOnCloseEnable {
+				data, ok := conn.Get("state").(*ConnData)
+				if !ok {
+					return fmt.Errorf("failed to get state")
+				}
 
-			if data.Cmd != nil && !data.Stopped {
-				if cfg.IsCommandCancelOnCloseEnable {
+				if data.Cmd != nil && !data.Stopped {
 					data.IsKilledByClose = true
+
+					// wait 1 second
+					time.Sleep(1 * time.Second)
+
 					if data.Cmd != nil {
 						data.Cmd.Cancel()
 					}
 				}
 			}
+
+			// if client disconnect, we want to keep the command running until it's done
+			//	which means we don't want to kill the command when client disconnect
+			//	which is used to support idp server (use agent client) redeploy without pain
 
 			return nil
 		})
@@ -117,7 +128,7 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 					}
 				}()
 
-				data, ok := conn.Get("state").(*ConnData)
+				state, ok := conn.Get("state").(*ConnData)
 				if !ok {
 					return fmt.Errorf("failed to get state")
 				}
@@ -125,17 +136,17 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 				switch msg[0] {
 				case entities.MessagePing:
 					logger.Debugf("[ws][id: %s] receive ping", conn.ID())
-					data.HeartbeatTimeoutTimer.Reset(heartbeatTimeout)
+					state.HeartbeatTimeoutTimer.Reset(heartbeatTimeout)
 					return nil
 				case entities.MessageAuthRequest:
 					logger.Infof("[ws][id: %s] auth request", conn.ID())
-					data.AuthClient = &entities.AuthRequest{}
-					if err := json.Unmarshal(msg[1:], data.AuthClient); err != nil {
+					state.AuthClient = &entities.AuthRequest{}
+					if err := json.Unmarshal(msg[1:], state.AuthClient); err != nil {
 						logger.Errorf("[ws][id: %s] failed to unmarshal auth request: %s", conn.ID(), err)
 						return nil
 					}
-					data.AuthenticationTimeoutTimer.Stop()
-					if err := authenticator(data.AuthClient.ClientID, data.AuthClient.ClientSecret); err != nil {
+					state.AuthenticationTimeoutTimer.Stop()
+					if err := authenticator(state.AuthClient.ClientID, state.AuthClient.ClientSecret); err != nil {
 						logger.Errorf("[ws][id: %s] failed to authenticate => %v", conn.ID(), err)
 
 						conn.WriteTextMessage(append([]byte{entities.MessageAuthResponseFailure}, []byte(fmt.Sprintf("failed to authenticate: %s\n", err))...))
@@ -144,11 +155,11 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 						return nil
 					}
 
-					data.IsAuthenticated = true
+					state.IsAuthenticated = true
 					logger.Infof("[ws][id: %s] authenticated", conn.ID())
 					conn.WriteTextMessage([]byte{entities.MessageAuthResponseSuccess})
 				case entities.MessageCommand:
-					if !data.IsAuthenticated {
+					if !state.IsAuthenticated {
 						logger.Errorf("[ws][id: %s] not authenticated", conn.ID())
 						conn.WriteTextMessage(append([]byte{entities.MessageCommandStderr}, []byte("not authenticated\n")...))
 						conn.WriteTextMessage([]byte{entities.MessageCommandExitCode, byte(1)})
@@ -157,7 +168,7 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 					}
 
 					commandN := &entities.Command{}
-					data.CommandN = commandN
+					state.CommandN = commandN
 					tmpScriptFilepath := ""
 					if err := json.Unmarshal(msg[1:], commandN); err != nil {
 						logger.Errorf("failed to unmarshal command request: %s", err)
@@ -230,7 +241,7 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 					if err != nil {
 						panic(fmt.Errorf("failed to create command (1): %s", err))
 					}
-					data.Cmd = cmd
+					state.Cmd = cmd
 
 					// timeout
 					var commandTimeoutTimer *time.Timer
@@ -251,8 +262,13 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 					cmdCfg.StartAt.WriteString(datetime.Now().Format("YYYY-MM-DD HH:mm:ss"))
 					err = cmd.Run()
 					if err != nil {
-						if data.IsKilledByClose {
+						if state.IsKilledByClose {
 							logger.Infof("[command] killed by Close: %s", commandN.Script)
+							return nil
+						}
+
+						if state.IsCancelled {
+							logger.Infof("[command] cancelled: %s", commandN.Script)
 							return nil
 						}
 
@@ -286,11 +302,24 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 						commandTimeoutTimer.Stop()
 					}
 
-					if data.HeartbeatTimeoutTimer != nil {
-						data.HeartbeatTimeoutTimer.Stop()
+					if state.HeartbeatTimeoutTimer != nil {
+						state.HeartbeatTimeoutTimer.Stop()
 					}
 
-					data.Stopped = true
+					state.Stopped = true
+				case entities.MessageCommandCancelRequest:
+					// 更新状态
+					state.IsCancelled = true
+
+					// wait 1 second
+					time.Sleep(1 * time.Second)
+
+					// if command is running, cancel it
+					if state.Cmd != nil && !state.Stopped {
+						state.Cmd.Cancel()
+					}
+					conn.WriteTextMessage([]byte{entities.MessageCommandCancelResponse})
+					conn.WriteTextMessage([]byte{entities.MessageCommandExitCode, byte(0)})
 				default:
 					logger.Errorf("unknown message type: %d", msg[0])
 				}
