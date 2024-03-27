@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/go-idp/agent/server"
 	"github.com/go-zoox/cli"
@@ -39,7 +40,7 @@ func RegistryServer(app *cli.MultipleProgram) {
 				EnvVars: []string{"CAAS_WORKDIR"},
 				Value:   "/tmp/agent/workdir",
 			},
-			&cli.StringFlag{
+			&cli.StringSliceFlag{
 				Name:    "environment",
 				Usage:   "specify command environment",
 				Aliases: []string{"e"},
@@ -125,6 +126,21 @@ func RegistryServer(app *cli.MultipleProgram) {
 
 			if ctx.String("workdir") != "" {
 				cfg.WorkDir = ctx.String("workdir")
+			}
+
+			if ctx.String("environment") != "" {
+				for _, env := range ctx.StringSlice("environment") {
+					if env == "" {
+						continue
+					}
+
+					kv := strings.SplitN(env, "=", 2)
+					if len(kv) == 2 {
+						cfg.Environment[kv[0]] = kv[1]
+					} else {
+						cfg.Environment[kv[0]] = ""
+					}
+				}
 			}
 
 			if ctx.Int64("timeout") != 0 {
