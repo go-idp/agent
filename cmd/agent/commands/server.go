@@ -134,6 +134,8 @@ func RegistryServer(app *cli.MultipleProgram) {
 						continue
 					}
 
+					cfg.Environment = map[string]string{}
+
 					kv := strings.SplitN(env, "=", 2)
 					if len(kv) == 2 {
 						cfg.Environment[kv[0]] = kv[1]
