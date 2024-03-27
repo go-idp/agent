@@ -214,6 +214,10 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 						}
 
 						if cfg.Environment != nil {
+							if c.Command.Environment == nil {
+								c.Command.Environment = map[string]string{}
+							}
+
 							for k, v := range cfg.Environment {
 								c.Command.Environment[k] = v
 							}
