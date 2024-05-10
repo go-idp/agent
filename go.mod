@@ -13,7 +13,7 @@ require (
 	github.com/go-zoox/fs v1.3.14
 	github.com/go-zoox/logger v1.5.1
 	github.com/go-zoox/safe v1.0.1
-	github.com/go-zoox/terminal v1.7.0
+	github.com/go-zoox/terminal v1.7.1
 	github.com/go-zoox/uuid v0.0.1
 	github.com/go-zoox/websocket v1.0.6
 	github.com/go-zoox/zoox v1.14.32
