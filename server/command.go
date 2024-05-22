@@ -7,7 +7,7 @@ import (
 )
 
 // Commands
-var commandsCapacity = 1000
+var commandsCapacity = 100
 var commandsMap = safe.NewMap[string, *dcommand.Command](func(mc *safe.MapConfig) {
 	mc.Capacity = commandsCapacity
 })

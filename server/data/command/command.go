@@ -102,7 +102,7 @@ func (c *Command) Run() error {
 		Status:    "running",
 	}
 	c.Log = safe.NewList[Log](func(lc *safe.ListConfig) {
-		lc.Capacity = 10000
+		lc.Capacity = 100
 	})
 
 	workdir := fmt.Sprintf("%s/%s", c.Cmd.WorkDirBase, c.ID)
