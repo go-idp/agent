@@ -14,6 +14,12 @@ import (
 	"github.com/go-zoox/logger"
 )
 
+type Config struct {
+	Server       string `config:"server"`
+	ClientID     string `config:"client_id"`
+	ClientSecret string `config:"client_secret"`
+}
+
 func RegistryClient(app *cli.MultipleProgram) {
 	app.Register("client", &cli.Command{
 		Name:  "client",
@@ -72,7 +78,7 @@ func RegistryClient(app *cli.MultipleProgram) {
 			},
 		},
 		Action: func(ctx *cli.Context) (err error) {
-			cfg := &client.Config{}
+			cfg := &Config{}
 			if err := cli.LoadConfig(ctx, cfg); err != nil {
 				return fmt.Errorf("failed to load config file: %v", err)
 			}
@@ -173,10 +179,13 @@ func RegistryClient(app *cli.MultipleProgram) {
 				return fmt.Errorf("script is required")
 			}
 
-			cfg.Stdout = os.Stdout
-			cfg.Stderr = os.Stdout
-
-			c := client.New(cfg)
+			c := client.New(&client.Config{
+				Server:       cfg.Server,
+				ClientID:     cfg.ClientID,
+				ClientSecret: cfg.ClientSecret,
+				Stdout:       os.Stdout,
+				Stderr:       os.Stderr,
+			})
 			if err := c.Connect(); err != nil {
 				logger.Debugf("failed to connect to server: %s", err)
 				return fmt.Errorf("failed to connect server(%s): %s", ctx.String("server"), err)
