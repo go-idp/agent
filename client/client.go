@@ -156,9 +156,12 @@ func (c *client) Connect() (err error) {
 		// close
 		go func() {
 			<-c.closeCh
-
+			logger.Infof("closing connection ...")
+			logger.Infof("canceling context ...")
 			cancel()
+			logger.Infof("cancelled context")
 			conn.Close()
+			logger.Infof("closed connection")
 		}()
 
 		// auth request
@@ -188,9 +191,10 @@ func (c *client) Connect() (err error) {
 				for {
 					select {
 					case <-ctx.Done():
+						logger.Infof("stop heart beat ping")
 						return
 					case <-time.After(3 * time.Second):
-						// logger.Debugf("ping")
+						logger.Infof("heart beat ping ...")
 						if err := conn.WriteTextMessage([]byte{entities.MessagePing}); err != nil {
 							logger.Errorf("failed to send ping: %s", err)
 							return
