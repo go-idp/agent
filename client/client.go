@@ -191,10 +191,10 @@ func (c *client) Connect() (err error) {
 				for {
 					select {
 					case <-ctx.Done():
-						logger.Infof("stop heart beat ping")
+						// logger.Infof("stop heart beat ping")
 						return
 					case <-time.After(3 * time.Second):
-						logger.Infof("heart beat ping ...")
+						// logger.Infof("heart beat ping ...")
 						if err := conn.WriteTextMessage([]byte{entities.MessagePing}); err != nil {
 							logger.Errorf("failed to send ping: %s", err)
 							return
