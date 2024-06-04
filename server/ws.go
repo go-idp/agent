@@ -45,7 +45,7 @@ type ConnData struct {
 	// Stopped                    bool
 	// IsKilledByClose            bool
 	AuthenticationTimeoutTimer *time.Timer
-	HeartbeatTimeoutTimer      *time.Timer
+	// HeartbeatTimeoutTimer      *time.Timer
 	//
 	// IsCancelled bool
 
@@ -111,11 +111,11 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 					conn.Close()
 				}
 			})
-			data.HeartbeatTimeoutTimer = time.AfterFunc(heartbeatTimeout, func() {
-				logger.Debugf("[ws][id: %s] heart beat timeout", conn.ID())
+			// data.HeartbeatTimeoutTimer = time.AfterFunc(heartbeatTimeout, func() {
+			// 	logger.Debugf("[ws][id: %s] heart beat timeout", conn.ID())
 
-				conn.Close()
-			})
+			// 	conn.Close()
+			// })
 
 			conn.Set("state", data)
 
@@ -149,7 +149,7 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 				switch msg[0] {
 				case entities.MessagePing:
 					logger.Debugf("[ws][id: %s] receive ping", conn.ID())
-					connState.HeartbeatTimeoutTimer.Reset(heartbeatTimeout)
+					// connState.HeartbeatTimeoutTimer.Reset(heartbeatTimeout)
 					return nil
 				case entities.MessageAuthRequest:
 					logger.Infof("[ws][id: %s] auth request", conn.ID())
@@ -372,9 +372,9 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 						commandTimeoutTimer.Stop()
 					}
 
-					if connState.HeartbeatTimeoutTimer != nil {
-						connState.HeartbeatTimeoutTimer.Stop()
-					}
+					// if connState.HeartbeatTimeoutTimer != nil {
+					// 	connState.HeartbeatTimeoutTimer.Stop()
+					// }
 
 					connState.Cmd.State.Stopped = true
 				case entities.MessageCommandCancelRequest:
