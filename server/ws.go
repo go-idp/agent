@@ -54,7 +54,7 @@ type ConnData struct {
 }
 
 func createWsService(cfg *Config) func(server websocket.Server) {
-	heartbeatTimeout := 30 * time.Second
+	// heartbeatTimeout := 30 * time.Second
 	authenticator := createAuthenticator(cfg)
 
 	return func(server websocket.Server) {
