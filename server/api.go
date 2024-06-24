@@ -71,9 +71,9 @@ func createCommandAPI(cfg *Config) func(ctx *zoox.Context) {
 			state.Command.Running.Dec(1)
 			state.Command.Cancelled.Inc(1)
 		})
-		dc.On("finish", func(payload any) {
+		dc.On("complete", func(payload any) {
 			state.Command.Running.Dec(1)
-			state.Command.Finished.Inc(1)
+			state.Command.Completed.Inc(1)
 		})
 
 		commandsMap.Set(dc.ID, dc)

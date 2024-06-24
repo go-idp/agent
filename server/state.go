@@ -11,7 +11,7 @@ type CommandState struct {
 	Running   *safe.Int `json:"running"`
 	Cancelled *safe.Int `json:"cancelled"`
 	Error     *safe.Int `json:"error"`
-	Finished  *safe.Int `json:"finished"`
+	Completed *safe.Int `json:"completed"`
 }
 
 var state = &State{
@@ -20,6 +20,6 @@ var state = &State{
 		Running:   safe.NewInt(),
 		Cancelled: safe.NewInt(),
 		Error:     safe.NewInt(),
-		Finished:  safe.NewInt(),
+		Completed: safe.NewInt(),
 	},
 }

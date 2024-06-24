@@ -36,20 +36,20 @@ type Command struct {
 }
 
 type State struct {
-	StartedAt  *datetime.DateTime `json:"started_at"`
-	FinishedAt *datetime.DateTime `json:"finished_at"`
-	ErroredAt  *datetime.DateTime `json:"errored_at"`
+	StartedAt   *datetime.DateTime `json:"started_at"`
+	CompletedAt *datetime.DateTime `json:"completed_at"`
+	ErroredAt   *datetime.DateTime `json:"errored_at"`
 	//
 	Stopped         bool `json:"stopped"`
 	IsKilledByClose bool `json:"is_killed_by_close"`
 	IsCancelled     bool `json:"is_cancelled"`
-	IsFinished      bool `json:"is_finished"`
+	IsCompleted     bool `json:"is_completed"`
 	IsError         bool `json:"is_error"`
 	IsTimeout       bool `json:"is_timeout"`
 	//
 	Error error `json:"error"`
 	//
-	Status string `json:"status"` // running, cancelled, finished, error
+	Status string `json:"status"` // running, cancelled, completed, error
 }
 
 type Log struct {
@@ -186,11 +186,11 @@ func (c *Command) Run() error {
 		return fmt.Errorf("failed to run command: %s", err)
 	}
 
-	c.event.Emit("finish", c.ID)
+	c.event.Emit("complete", c.ID)
 
-	c.State.IsFinished = true
-	c.State.Status = "finished"
-	c.State.FinishedAt = datetime.Now()
+	c.State.IsCompleted = true
+	c.State.Status = "completed"
+	c.State.CompletedAt = datetime.Now()
 	return nil
 }
 
@@ -221,5 +221,5 @@ func (c *Command) On(event string, fn func(payload any)) {
 
 // IsRunning returns true if the command is running
 func (c *Command) IsRunning() bool {
-	return !c.State.IsCancelled && !c.State.IsFinished && !c.State.IsError
+	return !c.State.IsCancelled && !c.State.IsCompleted && !c.State.IsError
 }

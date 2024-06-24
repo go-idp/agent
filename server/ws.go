@@ -239,9 +239,9 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 						state.Command.Running.Dec(1)
 						state.Command.Cancelled.Inc(1)
 					})
-					dc.On("finish", func(payload any) {
+					dc.On("complete", func(payload any) {
 						state.Command.Running.Dec(1)
-						state.Command.Finished.Inc(1)
+						state.Command.Completed.Inc(1)
 					})
 
 					commandsMap.Set(dc.ID, dc)
@@ -355,7 +355,7 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 						return nil
 					}
 
-					// connState.Cmd.State.IsFinished = true
+					// connState.Cmd.State.IsCompleted = true
 
 					cmdCfg.SucceedAt.WriteString(datetime.Now().Format("YYYY-MM-DD HH:mm:ss"))
 					cmdCfg.Status.WriteString("success")
