@@ -310,14 +310,6 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 					// }
 					// connState.Cmd = cmd
 
-					// timeout
-					var commandTimeoutTimer *time.Timer
-					if cfg.Timeout != 0 {
-						commandTimeoutTimer = time.AfterFunc(time.Duration(cfg.Timeout)*time.Second, func() {
-							dc.Cancel()
-						})
-					}
-
 					dc.SetStdout(io.MultiWriter(cmdCfg.Log, &WSClientWriter{Conn: conn, Flag: entities.MessageCommandStdout}))
 					dc.SetStderr(io.MultiWriter(cmdCfg.Log, &WSClientWriter{Conn: conn, Flag: entities.MessageCommandStderr}))
 					defer cmdCfg.Log.Close()
@@ -326,8 +318,8 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 					cmdCfg.Script.WriteString(commandN.Script)
 					cmdCfg.Env.WriteString(strings.Join(env, "\n"))
 					cmdCfg.StartAt.WriteString(datetime.Now().Format("YYYY-MM-DD HH:mm:ss"))
-					err = dc.Run()
-					if err != nil {
+
+					if err = dc.Run(); err != nil {
 						// if connState.Cmd.State.IsKilledByClose {
 						// 	logger.Infof("[command] killed by Close: %s", commandN.Script)
 						// 	return nil
@@ -337,6 +329,11 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 						// 	logger.Infof("[command] cancelled: %s", commandN.Script)
 						// 	return nil
 						// }
+
+						if dc.State.Status == "cancelled" {
+							logger.Infof("[command] cancelled: %s", commandN.Script)
+							return nil
+						}
 
 						cmdCfg.FailedAt.WriteString(datetime.Now().Format("YYYY-MM-DD HH:mm:ss"))
 						cmdCfg.Error.WriteString(err.Error())
@@ -367,10 +364,6 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 						if err := fs.Remove(tmpScriptFilepath); err != nil {
 							panic(fmt.Errorf("failed to remove tmp script file: %s", err))
 						}
-					}
-
-					if commandTimeoutTimer != nil {
-						commandTimeoutTimer.Stop()
 					}
 
 					if connState.HeartbeatTimeoutTimer != nil {
