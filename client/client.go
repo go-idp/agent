@@ -156,12 +156,12 @@ func (c *client) Connect() (err error) {
 		// close
 		go func() {
 			<-c.closeCh
-			logger.Infof("closing connection ...")
-			logger.Infof("canceling context ...")
+			// logger.Infof("closing connection ...")
+			// logger.Infof("canceling context ...")
 			cancel()
-			logger.Infof("cancelled context")
+			// logger.Infof("cancelled context")
 			conn.Close()
-			logger.Infof("closed connection")
+			// logger.Infof("closed connection")
 		}()
 
 		// auth request
