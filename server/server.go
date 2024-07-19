@@ -7,6 +7,7 @@ import (
 	"github.com/go-idp/agent"
 	"github.com/go-idp/agent/entities"
 	"github.com/go-zoox/chalk"
+	"github.com/go-zoox/datetime"
 	"github.com/go-zoox/fs"
 	"github.com/go-zoox/logger"
 	terminal "github.com/go-zoox/terminal/server"
@@ -299,6 +300,7 @@ func (s *server) Run() error {
 			"description": "the agent of idp",
 			"version":     agent.Version,
 			"state":       state,
+			"running_at":  datetime.Now().Format("YYYY-MM-DD HH:mm:ss"),
 		})
 	})
 
