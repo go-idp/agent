@@ -294,13 +294,14 @@ func (s *server) Run() error {
 		// group.Post("/:id/start", startCommandAPI(s.cfg))
 	})
 
+	runningAt := datetime.Now().Format("YYYY-MM-DD HH:mm:ss")
 	app.Get("/", func(ctx *zoox.Context) {
 		ctx.JSON(200, zoox.H{
 			"title":       "idp agent",
 			"description": "the agent of idp",
 			"version":     agent.Version,
 			"state":       state,
-			"running_at":  datetime.Now().Format("YYYY-MM-DD HH:mm:ss"),
+			"running_at":  runningAt,
 		})
 	})
 
