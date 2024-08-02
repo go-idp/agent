@@ -40,12 +40,14 @@ type State struct {
 	CompletedAt *datetime.DateTime `json:"completed_at"`
 	ErroredAt   *datetime.DateTime `json:"errored_at"`
 	//
-	Stopped         bool `json:"stopped"`
+	// Stopped         bool `json:"stopped"`
 	IsKilledByClose bool `json:"is_killed_by_close"`
-	IsCancelled     bool `json:"is_cancelled"`
-	IsCompleted     bool `json:"is_completed"`
-	IsError         bool `json:"is_error"`
-	IsTimeout       bool `json:"is_timeout"`
+	//
+	IsCancelled bool `json:"is_cancelled"`
+	IsCompleted bool `json:"is_completed"`
+	IsError     bool `json:"is_error"`
+	//
+	IsTimeout bool `json:"is_timeout"`
 	//
 	Error error `json:"error"`
 	//
@@ -168,21 +170,23 @@ func (c *Command) Run() error {
 
 	if err := c.cmd.Run(); err != nil {
 		if c.State.IsKilledByClose {
-			logger.Infof("[command] killed by close: %s", c.Cmd.Script)
-			return nil
+			logger.Infof("[command][id: %s] cancelled (connection closed)", c.ID)
+			return fmt.Errorf("command is cancelled (connection closed)")
 		}
 
 		if c.State.IsCancelled {
-			logger.Infof("[command] cancelled: %s", c.Cmd.Script)
-			return nil
+			logger.Infof("[command][id: %s] cancelled", c.ID)
+			return fmt.Errorf("command is cancelled")
 		}
 
 		c.event.Emit("error", fmt.Errorf("failed to run command: %s", err))
-
 		c.State.IsError = true
 		c.State.Status = "error"
 		c.State.Error = err
 		c.State.ErroredAt = datetime.Now()
+
+		logger.Infof("[command][id: %s] failed to run: %s \n\n##### SCRIPT START #####\n%s\n##### SCRIPT START #####\n", c.ID, err.Error(), c.Cmd.Script)
+
 		return fmt.Errorf("failed to run command: %s", err)
 	}
 
@@ -191,6 +195,8 @@ func (c *Command) Run() error {
 	c.State.IsCompleted = true
 	c.State.Status = "completed"
 	c.State.CompletedAt = datetime.Now()
+
+	logger.Infof("[command][id: %s] succeed to run", c.ID)
 	return nil
 }
 

@@ -70,30 +70,30 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 		})
 
 		server.OnClose(func(conn conn.Conn, code int, message string) error {
-			logger.Infof("[ws][id: %s] Close (code: %d, message: %s)", conn.ID(), code, message)
+			logger.Infof("[ws][id: %s] connect close (code: %d, message: %s)", conn.ID(), code, message)
 
 			// enable cancel command when close
-			if cfg.IsCommandCancelOnCloseEnable {
-				data, ok := conn.Get("state").(*ConnData)
-				if !ok {
-					return fmt.Errorf("failed to get state")
-				}
-
-				if data.Cmd != nil && !data.Cmd.State.Stopped {
-					data.Cmd.State.IsKilledByClose = true
-
-					// wait 1 second
-					time.Sleep(1 * time.Second)
-
-					if data.Cmd != nil {
-						data.Cmd.Cancel()
-					}
-				}
+			if cfg.IsCommandCancelOnCloseDisabled {
+				return nil
 			}
 
-			// if client disconnect, we want to keep the command running until it's done
-			//	which means we don't want to kill the command when client disconnect
-			//	which is used to support idp server (use agent client) redeploy without pain
+			data, ok := conn.Get("state").(*ConnData)
+			if !ok {
+				return fmt.Errorf("failed to get state")
+			}
+
+			// if client disconnect, we want to canncel the command running
+			//	which means we want to kill the command when client disconnect
+			if data.Cmd != nil && data.Cmd.IsRunning() {
+				data.Cmd.State.IsKilledByClose = true
+
+				// // wait 1 second
+				// time.Sleep(1 * time.Second)
+
+				if data.Cmd != nil {
+					data.Cmd.Cancel()
+				}
+			}
 
 			return nil
 		})
@@ -314,40 +314,28 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 					dc.SetStderr(io.MultiWriter(cmdCfg.Log, &WSClientWriter{Conn: conn, Flag: entities.MessageCommandStderr}))
 					defer cmdCfg.Log.Close()
 
-					logger.Infof("[command] start to run: %s", commandN.Script)
+					logger.Infof("[ws][id: %s] command start to run ...", dc.ID)
 					cmdCfg.Script.WriteString(commandN.Script)
 					cmdCfg.Env.WriteString(strings.Join(env, "\n"))
 					cmdCfg.StartAt.WriteString(datetime.Now().Format("YYYY-MM-DD HH:mm:ss"))
 
 					if err = dc.Run(); err != nil {
-						// if connState.Cmd.State.IsKilledByClose {
-						// 	logger.Infof("[command] killed by Close: %s", commandN.Script)
-						// 	return nil
-						// }
-
-						// if connState.Cmd.State.IsCancelled {
-						// 	logger.Infof("[command] cancelled: %s", commandN.Script)
-						// 	return nil
-						// }
+						cmdCfg.Error.WriteString(err.Error())
 
 						if dc.State.Status == "cancelled" {
-							logger.Infof("[command] cancelled: %s", commandN.Script)
+							cmdCfg.Status.WriteString("cancelled")
 							return nil
 						}
 
 						cmdCfg.FailedAt.WriteString(datetime.Now().Format("YYYY-MM-DD HH:mm:ss"))
-						cmdCfg.Error.WriteString(err.Error())
 						cmdCfg.Status.WriteString("failure")
 
-						exitCode := -1
+						exitCode := 127
 						if errx, ok := err.(*errors.ExitError); ok {
 							exitCode = errx.ExitCode()
 						}
 
-						// connState.Cmd.State.IsError = true
-						// connState.Cmd.State.Error = err
-
-						logger.Errorf("[command] failed to run: %s (err: %v, exit code: %d)", commandN.Script, err, exitCode)
+						logger.Errorf("[ws][id: %s] command failed to run (err: %v, exit code: %d)", dc.ID, err, exitCode)
 						conn.WriteTextMessage([]byte{entities.MessageCommandExitCode, byte(exitCode)})
 						return nil
 					}
@@ -356,7 +344,6 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 
 					cmdCfg.SucceedAt.WriteString(datetime.Now().Format("YYYY-MM-DD HH:mm:ss"))
 					cmdCfg.Status.WriteString("success")
-					logger.Infof("[command] succeed to run: %s", commandN.Script)
 
 					conn.WriteTextMessage([]byte{entities.MessageCommandExitCode, byte(0)})
 
@@ -369,8 +356,6 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 					if connState.HeartbeatTimeoutTimer != nil {
 						connState.HeartbeatTimeoutTimer.Stop()
 					}
-
-					connState.Cmd.State.Stopped = true
 				case entities.MessageCommandCancelRequest:
 					// 更新状态
 					connState.Cmd.State.IsCancelled = true
@@ -379,7 +364,7 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 					time.Sleep(1 * time.Second)
 
 					// if command is running, cancel it
-					if connState.Cmd != nil && !connState.Cmd.State.Stopped {
+					if connState.Cmd != nil && !connState.Cmd.IsRunning() {
 						connState.Cmd.Cancel()
 					}
 					conn.WriteTextMessage([]byte{entities.MessageCommandCancelResponse})
