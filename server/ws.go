@@ -70,7 +70,7 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 		})
 
 		server.OnClose(func(conn conn.Conn, code int, message string) error {
-			logger.Infof("[ws][id: %s] connect close (code: %d, message: %s)", conn.ID(), code, message)
+			logger.Infof("[ws][id: %s] connection close (code: %d, message: %s)", conn.ID(), code, message)
 
 			// enable cancel command when close
 			if cfg.IsCommandCancelOnCloseDisabled {
@@ -324,6 +324,8 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 
 						if dc.State.Status == "cancelled" {
 							cmdCfg.Status.WriteString("cancelled")
+							logger.Infof("[ws][id: %s] command cancelled", dc.ID)
+							// conn.WriteTextMessage([]byte{entities.MessageCommandExitCode, 127})
 							return nil
 						}
 
@@ -356,6 +358,8 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 					if connState.HeartbeatTimeoutTimer != nil {
 						connState.HeartbeatTimeoutTimer.Stop()
 					}
+
+					logger.Infof("[ws][id: %s] command succeed to run .", dc.ID)
 				case entities.MessageCommandCancelRequest:
 					// 更新状态
 					connState.Cmd.State.IsCancelled = true
