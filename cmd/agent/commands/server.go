@@ -1,11 +1,12 @@
 package commands
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/go-idp/agent/server"
 	"github.com/go-zoox/cli"
+	"github.com/go-zoox/core-utils/fmt"
+	"github.com/go-zoox/debug"
 )
 
 func RegistryServer(app *cli.MultipleProgram) {
@@ -187,6 +188,10 @@ func RegistryServer(app *cli.MultipleProgram) {
 
 			if cfg.Port == 0 {
 				cfg.Port = 8838
+			}
+
+			if debug.IsDebugMode() {
+				fmt.PrintJSON("config", cfg)
 			}
 
 			if ctx.Bool("daemon") {
