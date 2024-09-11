@@ -46,13 +46,26 @@ func (e ExitError) Error() string {
 
 // Config is the configuration of caas client
 type Config struct {
-	Server       string `config:"server"`
-	ClientID     string `config:"client_id"`
+	// Server is the address of caas server
+	//	Example:
+	//		plain: 				ws://localhost:8838
+	//		tls: 					wss://localhost:8838
+	//		custom path: 	ws://localhost:8838/custom-path
+	Server string `config:"server"`
+
+	// ClientID is the client id
+	ClientID string `config:"client_id"`
+
+	// ClientSecret is the client secret
 	ClientSecret string `config:"client_secret"`
-	//
+
+	// Stdout is the standard output writer
 	Stdout io.Writer
+
+	// Stderr is the standard error writer
 	Stderr io.Writer
-	//
+
+	// ExecTimeout is the timeout of command execution
 	ExecTimeout time.Duration `config:"exec_timeout"`
 }
 
@@ -311,7 +324,11 @@ func (c *client) TerminalURL(path ...string) string {
 		return ""
 	}
 
-	u.Path = terminalPath
+	if strings.EndsWith(u.Path, "/") {
+		u.Path = u.Path[:len(u.Path)-1]
+	}
+	u.Path = u.Path + terminalPath
+
 	return u.String()
 }
 

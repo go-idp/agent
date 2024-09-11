@@ -8,6 +8,7 @@ require (
 	github.com/go-zoox/command v1.5.4
 	github.com/go-zoox/core-utils v1.4.7
 	github.com/go-zoox/datetime v1.3.1
+	github.com/go-zoox/debug v1.0.5
 	github.com/go-zoox/eventemitter v1.4.0
 	github.com/go-zoox/fetch v1.8.1
 	github.com/go-zoox/fs v1.3.14
@@ -49,7 +50,6 @@ require (
 	github.com/go-zoox/counter v1.2.1 // indirect
 	github.com/go-zoox/cron v1.2.1 // indirect
 	github.com/go-zoox/crypto v1.1.8 // indirect
-	github.com/go-zoox/debug v1.0.5 // indirect
 	github.com/go-zoox/dotenv v1.3.0 // indirect
 	github.com/go-zoox/encoding v1.2.1 // indirect
 	github.com/go-zoox/errors v1.0.2 // indirect
