@@ -34,10 +34,12 @@ COPY --from=builder /build/agent /bin
 
 RUN zmicro update -a
 
-RUN zmicro plugin install eunomia
+RUN zmicro package install kubectl
 
-RUN zmicro package install rsync
+RUN zmicro package install helm
 
 EXPOSE 8838
+
+ENV TZ=Asia/Shanghai HOME=/root
 
 CMD agent server
