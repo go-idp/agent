@@ -10,6 +10,7 @@ import (
 	"github.com/go-zoox/datetime"
 	"github.com/go-zoox/fs"
 	"github.com/go-zoox/logger"
+	"github.com/go-zoox/proxy/utils/rewriter"
 	terminal "github.com/go-zoox/terminal/server"
 	"github.com/go-zoox/websocket"
 	"github.com/go-zoox/zoox"
@@ -52,6 +53,8 @@ type Config struct {
 	TerminalDriver      string `config:"terminal_driver"`
 	TerminalDriverImage string `config:"terminal_driver_image"`
 	TerminalInitCommand string `config:"terminal_init_command"`
+	//
+	TerminalRelay string `config:"terminal_relay"`
 }
 
 // CommandConfig is the configuration of caas command
@@ -192,42 +195,60 @@ func (s *server) Run() error {
 	})
 
 	{ // Web Terminal
-		server, err := terminal.Serve(&terminal.Config{
-			Shell:       s.cfg.TerminalShell,
-			Driver:      s.cfg.TerminalDriver,
-			DriverImage: s.cfg.TerminalDriverImage,
-			InitCommand: s.cfg.TerminalInitCommand,
-			Username:    s.cfg.ClientID,
-			Password:    s.cfg.ClientSecret,
+
+		app.Get("/wt", func(ctx *zoox.Context) {
+			ctx.HTML(200, terminal.RenderXTerm(zoox.H{
+				"wsPath": "/terminal",
+			}))
 		})
-		if err != nil {
-			return fmt.Errorf("failed to create terminal server: %s", err)
-		}
 
-		app.WebSocket("/terminal", func(opt *zoox.WebSocketOption) {
-			opt.Server = server
-
-			opt.Middlewares = append(opt.Middlewares, func(ctx *zoox.Context) {
-				if s.cfg.ClientID == "" && s.cfg.ClientSecret == "" {
-					ctx.Next()
-					return
+		if s.cfg.TerminalRelay != "" {
+			app.Proxy("/terminal", s.cfg.TerminalRelay, func(cfg *zoox.ProxyConfig) {
+				cfg.Rewrites = []rewriter.Rewriter{
+					{
+						From: "/terminal",
+						To:   "/",
+					},
 				}
-
-				user, pass, ok := ctx.Request.BasicAuth()
-				if !ok {
-					ctx.Set("WWW-Authenticate", `Basic realm="go-zoox"`)
-					ctx.Status(401)
-					return
-				}
-
-				if !(user == s.cfg.ClientID && pass == s.cfg.ClientSecret) {
-					ctx.Status(401)
-					return
-				}
-
-				ctx.Next()
 			})
-		})
+		} else {
+			server, err := terminal.Serve(&terminal.Config{
+				Shell:       s.cfg.TerminalShell,
+				Driver:      s.cfg.TerminalDriver,
+				DriverImage: s.cfg.TerminalDriverImage,
+				InitCommand: s.cfg.TerminalInitCommand,
+				Username:    s.cfg.ClientID,
+				Password:    s.cfg.ClientSecret,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to create terminal server: %s", err)
+			}
+
+			app.WebSocket("/terminal", func(opt *zoox.WebSocketOption) {
+				opt.Server = server
+
+				opt.Middlewares = append(opt.Middlewares, func(ctx *zoox.Context) {
+					if s.cfg.ClientID == "" && s.cfg.ClientSecret == "" {
+						ctx.Next()
+						return
+					}
+
+					user, pass, ok := ctx.Request.BasicAuth()
+					if !ok {
+						ctx.Set("WWW-Authenticate", `Basic realm="go-zoox"`)
+						ctx.Status(401)
+						return
+					}
+
+					if !(user == s.cfg.ClientID && pass == s.cfg.ClientSecret) {
+						ctx.Status(401)
+						return
+					}
+
+					ctx.Next()
+				})
+			})
+		}
 	}
 
 	app.Post("/exec", func(ctx *zoox.Context) {

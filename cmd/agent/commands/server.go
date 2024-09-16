@@ -106,6 +106,11 @@ func RegistryServer(app *cli.MultipleProgram) {
 				Usage:   "specify terminal init command",
 				EnvVars: []string{"CAAS_TERMINAL_INIT_COMMAND"},
 			},
+			&cli.StringFlag{
+				Name:    "terminal-relay",
+				Usage:   "specify terminal relay",
+				EnvVars: []string{"CAAS_TERMINAL_RELAY"},
+			},
 		},
 		Action: func(ctx *cli.Context) (err error) {
 			cfg := &server.Config{}
@@ -184,6 +189,10 @@ func RegistryServer(app *cli.MultipleProgram) {
 
 			if ctx.String("terminal-init-command") != "" {
 				cfg.TerminalInitCommand = ctx.String("terminal-init-command")
+			}
+
+			if ctx.String("terminal-relay") != "" {
+				cfg.TerminalRelay = ctx.String("terminal-relay")
 			}
 
 			if cfg.Port == 0 {
