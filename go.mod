@@ -19,6 +19,7 @@ require (
 	github.com/go-zoox/uuid v0.0.1
 	github.com/go-zoox/websocket v1.3.4
 	github.com/go-zoox/zoox v1.15.4
+	golang.org/x/term v0.21.0
 )
 
 require (

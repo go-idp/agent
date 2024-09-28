@@ -11,6 +11,7 @@ import (
 
 	"net/url"
 
+	"github.com/go-idp/agent/constants"
 	"github.com/go-idp/agent/entities"
 	"github.com/go-zoox/core-utils/strings"
 	"github.com/go-zoox/logger"
@@ -314,7 +315,7 @@ func (c *client) Close() error {
 }
 
 func (c *client) TerminalURL(path ...string) string {
-	terminalPath := "/terminal"
+	terminalPath := constants.DefaultTerminalPath
 	if len(path) > 0 && path[0] != "" {
 		terminalPath = path[0]
 	}

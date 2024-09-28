@@ -1,38 +1,32 @@
 package commands
 
 import (
-	"bufio"
 	"fmt"
+	"io"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
-	"github.com/go-idp/agent/client"
-	"github.com/go-idp/agent/entities"
+	"github.com/go-idp/agent/constants"
 	"github.com/go-zoox/cli"
 	"github.com/go-zoox/core-utils/regexp"
-	"github.com/go-zoox/fetch"
 	"github.com/go-zoox/fs"
-	"github.com/go-zoox/logger"
+	"github.com/go-zoox/terminal/client"
+	"golang.org/x/term"
 )
 
 func RegistryShell(app *cli.MultipleProgram) {
 	app.Register("shell", &cli.Command{
 		Name:  "shell",
-		Usage: "idp agent shell",
+		Usage: "terminal shell for idp agent",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:    "server",
-				Usage:   "server url",
-				Aliases: []string{"s"},
-				EnvVars: []string{"CAAS_SERVER"},
-				// Required: true,
-				Value: "127.0.0.1",
-			},
-			&cli.StringFlag{
-				Name:    "script",
-				Usage:   "specify command script",
-				EnvVars: []string{"CAAS_SCRIPT"},
-				// Required: true,
+				Name:     "server",
+				Usage:    "server url, example: 10.0.0.1 / 10.0.0.1:8838",
+				Aliases:  []string{"s"},
+				EnvVars:  []string{"CAAS_SERVER"},
+				Required: true,
 			},
 			&cli.StringFlag{
 				Name:    "client-id",
@@ -44,114 +38,185 @@ func RegistryShell(app *cli.MultipleProgram) {
 				Usage:   "Auth Client Secret",
 				EnvVars: []string{"CAAS_CLIENT_SECRET"},
 			},
+			&cli.StringFlag{
+				Name:    "command",
+				Usage:   "specify exec command",
+				Aliases: []string{"c"},
+				EnvVars: []string{"COMMAND"},
+			},
+			&cli.StringFlag{
+				Name:  "shell",
+				Usage: "specify terminal shell",
+			},
+			&cli.StringFlag{
+				Name:    "workdir",
+				Usage:   "specify terminal workdir",
+				Aliases: []string{"w"},
+				EnvVars: []string{"WORKDIR"},
+			},
+			&cli.StringFlag{
+				Name:    "user",
+				Usage:   "specify terminal user",
+				Aliases: []string{"u"},
+				// EnvVars: []string{"USER"},
+			},
+			&cli.StringSliceFlag{
+				Name:    "env",
+				Usage:   "specify terminal env",
+				Aliases: []string{"e"},
+				EnvVars: []string{"ENV"},
+			},
+			&cli.StringFlag{
+				Name:    "image",
+				Usage:   "specify image for container runtime",
+				EnvVars: []string{"IMAGE"},
+			},
 			//
 			&cli.StringFlag{
+				Name:    "scriptfile",
+				Usage:   "specify script file",
+				EnvVars: []string{"SCRIPTFILE"},
+			},
+			&cli.StringFlag{
 				Name:    "envfile",
-				Usage:   "specify command envfile file path",
-				EnvVars: []string{"CAAS_ENV_FILE"},
+				Usage:   `specify env file, format: key=value`,
+				EnvVars: []string{"ENVFILE"},
 			},
 		},
 		Action: func(ctx *cli.Context) (err error) {
-			cfg := &client.Config{}
-			if err := cli.LoadConfig(ctx, cfg); err != nil {
-				return fmt.Errorf("failed to load config file: %v", err)
+			env := map[string]string{}
+			for _, e := range ctx.StringSlice("env") {
+				kv := strings.SplitN(e, "=", 2)
+				if len(kv) >= 2 {
+					env[kv[0]] = strings.Join(kv[1:], "=")
+				} else if len(kv) == 1 {
+					env[kv[0]] = ""
+				}
 			}
 
-			if ctx.String("server") != "" {
-				cfg.Server = ctx.String("server")
+			command := ctx.String("command")
+			if ctx.String("scriptfile") != "" {
+				command, err = fs.ReadFileAsString(ctx.String("scriptfile"))
+				if err != nil {
+					return err
+				}
 			}
 
-			if ctx.String("client-id") != "" {
-				cfg.ClientID = ctx.String("client-id")
+			if ctx.String("envfile") != "" {
+				envfile, err := fs.ReadFileAsString(ctx.String("envfile"))
+				if err != nil {
+					return err
+				}
+
+				for _, e := range strings.Split(envfile, "\n") {
+					if strings.TrimSpace(e) == "" {
+						continue
+					}
+					if strings.HasPrefix(e, "#") {
+						continue
+					}
+
+					kv := strings.SplitN(e, "=", 2)
+					if len(kv) >= 2 {
+						env[kv[0]] = strings.Join(kv[1:], "=")
+					} else if len(kv) == 1 {
+						env[kv[0]] = ""
+					}
+				}
 			}
 
-			if ctx.String("client-secret") != "" {
-				cfg.ClientSecret = ctx.String("client-secret")
+			cfg := &client.Config{
+				Server: ctx.String("server"),
+				//
+				Shell:   ctx.String("shell"),
+				WorkDir: ctx.String("workdir"),
+				//
+				Command:     command,
+				Environment: env,
+				User:        ctx.String("user"),
+				//
+				Image: ctx.String("image"),
+				//
+				Username: ctx.String("client-id"),
+				Password: ctx.String("client-secret"),
 			}
 
 			// add scheme
 			if !regexp.Match("^wss?://", cfg.Server) {
 				cfg.Server = fmt.Sprintf("ws://%s", cfg.Server)
+
+				// add port
+				if !regexp.Match(":\\d+$", cfg.Server) {
+					// host:port
+					cfg.Server = fmt.Sprintf("%s:8838", cfg.Server)
+				}
 			}
 
-			// add port
-			if !regexp.Match(":\\d+$", cfg.Server) {
-				// host:port
-				cfg.Server = fmt.Sprintf("%s:8838", cfg.Server)
+			// add path
+			if !regexp.Match("/$", cfg.Server) {
+				cfg.Server = fmt.Sprintf("%s%s", cfg.Server, constants.DefaultTerminalPath)
 			}
 
-			if !regexp.Match("^ws://[^:]+:\\d+", cfg.Server) {
+			if !regexp.Match("^wss?://[^:]+:\\d+", cfg.Server) {
 				return fmt.Errorf("invalid agent server: %s", cfg.Server)
 			}
 
-			environment := map[string]string{}
-
-			if envfilePath := ctx.String("envfile"); envfilePath != "" {
-				envText := ""
-				if regexp.Match("^https?://", envfilePath) {
-					response, err := fetch.Get(envfilePath)
-					if err != nil {
-						return fmt.Errorf("failed to fetch script file: %s", err)
-					}
-
-					envText = response.String()
-				} else {
-					if ok := fs.IsExist(envfilePath); !ok {
-						return fmt.Errorf("envfile path not found: %s", envfilePath)
-					}
-
-					if envTextX, err := fs.ReadFileAsString(envfilePath); err != nil {
-						return fmt.Errorf("failed to read script file: %s", err)
-					} else {
-						envText = envTextX
-					}
-				}
-
-				lines := strings.Split(envText, "\n")
-
-				for _, line := range lines {
-					if line == "" {
-						continue
-					}
-
-					if line[0] == '#' {
-						continue
-					}
-
-					parts := strings.SplitN(line, "=", 2)
-					if len(parts) != 2 {
-						return fmt.Errorf("invalid envfile line: %s", line)
-					}
-
-					environment[parts[0]] = parts[1]
-				}
-			}
-
 			c := client.New(cfg)
+
+			c.OnExit(func(code int, message string) {
+				os.Stdout.Write([]byte(message))
+				os.Exit(code)
+			})
+
 			if err := c.Connect(); err != nil {
-				logger.Debugf("failed to connect to server: %s", err)
-				return fmt.Errorf("server(%s) is not running", ctx.String("server"))
+				return err
+			}
+			defer c.Close()
+
+			// resize
+			if err := c.Resize(); err != nil {
+				return err
 			}
 
-			runCommand := func(cmd string) error {
-				return c.Exec(&entities.Command{
-					Script:      cmd,
-					Environment: environment,
-				})
-			}
+			go func() {
+				sigc := make(chan os.Signal, 1)
+				signal.Notify(sigc, syscall.SIGWINCH)
+				for {
+					s := <-sigc
+					switch s {
+					case syscall.SIGWINCH:
+						c.Resize()
+					}
+				}
+			}()
 
-			reader := bufio.NewReader(os.Stdin)
+			// switch stdin into 'raw' mode
+			oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
+			if err != nil {
+				return err
+			}
+			defer term.Restore(int(os.Stdin.Fd()), oldState)
+
+			var b []byte = make([]byte, 1)
 			for {
-				fmt.Print("$ ")
-				cmdString, err := reader.ReadString('\n')
-				if err != nil {
-					fmt.Fprintln(os.Stderr, err)
+				_, err := os.Stdin.Read(b)
+				if err == io.EOF {
+					break
 				}
-				err = runCommand(cmdString)
-				if err != nil {
-					fmt.Fprintln(os.Stderr, err)
+
+				switch b[0] {
+				// case 3: // Ctrl+C
+				// 	return nil
+				case 4: // Ctrl+D
+					return nil
+				default:
+					if err := c.Send(b); err != nil {
+						return err
+					}
 				}
 			}
+
+			return nil
 		},
 	})
 }

@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/go-idp/agent"
+	"github.com/go-idp/agent/constants"
 	"github.com/go-idp/agent/entities"
 	"github.com/go-zoox/chalk"
 	"github.com/go-zoox/datetime"
@@ -198,15 +199,15 @@ func (s *server) Run() error {
 
 		app.Get("/wt", func(ctx *zoox.Context) {
 			ctx.HTML(200, terminal.RenderXTerm(zoox.H{
-				"wsPath": "/terminal",
+				"wsPath": constants.DefaultTerminalPath,
 			}))
 		})
 
 		if s.cfg.TerminalRelay != "" {
-			app.Proxy("/terminal", s.cfg.TerminalRelay, func(cfg *zoox.ProxyConfig) {
+			app.Proxy(constants.DefaultTerminalPath, s.cfg.TerminalRelay, func(cfg *zoox.ProxyConfig) {
 				cfg.Rewrites = []rewriter.Rewriter{
 					{
-						From: "/terminal",
+						From: constants.DefaultTerminalPath,
 						To:   "/",
 					},
 				}
