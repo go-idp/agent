@@ -15,7 +15,7 @@ require (
 	github.com/go-zoox/logger v1.5.1
 	github.com/go-zoox/proxy v1.5.6
 	github.com/go-zoox/safe v1.2.0
-	github.com/go-zoox/terminal v1.8.9
+	github.com/go-zoox/terminal v1.9.0
 	github.com/go-zoox/uuid v0.0.1
 	github.com/go-zoox/websocket v1.3.4
 	github.com/go-zoox/zoox v1.15.4

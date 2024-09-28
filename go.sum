@@ -179,8 +179,8 @@ github.com/go-zoox/tag v1.0.9/go.mod h1:jrbJgC1dZAN5+vZlmrUKu1/UpbOo0xVyCC1MfLpG
 github.com/go-zoox/tag v1.1.0/go.mod h1:yMB7bMseqbOshUW9O9Dqfq0C7Mmy9OkccV/meEJHICs=
 github.com/go-zoox/tag v1.3.3 h1:z6N62jzas6SLH8NvSmsIzEsgLZXBeicV73aXh2mwxrk=
 github.com/go-zoox/tag v1.3.3/go.mod h1:I0ZCDrMDK6muFrHFNb6Tw5hKQ7ivaXAnMcKAVpRfCwI=
-github.com/go-zoox/terminal v1.8.9 h1:QCRArHuO0K2t4x52CdrrjOdXQMpuekhR82151tVVekc=
-github.com/go-zoox/terminal v1.8.9/go.mod h1:/jsnE8ugvAF4VMqW33EM8nDUxPkGEQ7q6U3Qu7lDG4k=
+github.com/go-zoox/terminal v1.9.0 h1:wcBV3SCl/q5HrD+5p0wNIDe1Edt5ahHunGl2FkmAXtI=
+github.com/go-zoox/terminal v1.9.0/go.mod h1:/jsnE8ugvAF4VMqW33EM8nDUxPkGEQ7q6U3Qu7lDG4k=
 github.com/go-zoox/testify v1.0.2 h1:G5sQ3xm0uwCuytnMhgnqZ5BItCt2DN3n2wLBqlIJEWA=
 github.com/go-zoox/testify v1.0.2/go.mod h1:L35iVL6xDKDL/TQOTRWyNL4H4nm8bzs6nde5XA7PYnY=
 github.com/go-zoox/uuid v0.0.1 h1:txqmDavRTq68gzzqWfJQLorFyUp9a7M2lmq2KcwPGPA=

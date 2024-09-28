@@ -157,9 +157,9 @@ func RegistryShell(app *cli.MultipleProgram) {
 				cfg.Server = fmt.Sprintf("%s%s", cfg.Server, constants.DefaultTerminalPath)
 			}
 
-			if !regexp.Match("^wss?://[^:]+:\\d+", cfg.Server) {
-				return fmt.Errorf("invalid agent server: %s", cfg.Server)
-			}
+			// if !regexp.Match("^wss?://[^:]+:\\d+", cfg.Server) {
+			// 	return fmt.Errorf("invalid agent server: %s", cfg.Server)
+			// }
 
 			c := client.New(cfg)
 
