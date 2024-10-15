@@ -155,6 +155,42 @@ func (s *server) Run() error {
 
 	app.Use(middleware.Prometheus())
 
+	// clean metadata dir at 3:00 every month
+	app.Cron().AddJob("clean-metadata", "0 3 * 1 *", func() error {
+		if s.cfg.IsCleanMetadataDirDisabled {
+			return nil
+		}
+
+		if s.cfg.MetadataDir == "" {
+			return nil
+		}
+
+		logger.Infof("[cronjob] clean metadata dir: %s", s.cfg.MetadataDir)
+		if err := fs.RemoveDir(s.cfg.MetadataDir); err != nil {
+			return fmt.Errorf("failed to clean metadata dir: %s", err)
+		}
+
+		return nil
+	})
+
+	// clean work dir at 3:00 every week
+	app.Cron().AddJob("clean-workdir", "0 3 * * 6", func() error {
+		if s.cfg.IsCleanWorkDirDisabled {
+			return nil
+		}
+
+		if s.cfg.WorkDir == "" {
+			return nil
+		}
+
+		logger.Infof("[cronjob] clean work dir: %s", s.cfg.WorkDir)
+		if err := fs.RemoveDir(s.cfg.WorkDir); err != nil {
+			return fmt.Errorf("failed to clean work dir: %s", err)
+		}
+
+		return nil
+	})
+
 	wsServer, err := websocket.NewServer()
 	if err != nil {
 		return err
