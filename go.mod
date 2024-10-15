@@ -19,7 +19,7 @@ require (
 	github.com/go-zoox/terminal v1.9.0
 	github.com/go-zoox/uuid v0.0.1
 	github.com/go-zoox/websocket v1.3.5
-	github.com/go-zoox/zoox v1.15.15
+	github.com/go-zoox/zoox v1.15.17
 	golang.org/x/term v0.25.0
 )
 
