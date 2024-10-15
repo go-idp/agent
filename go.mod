@@ -3,7 +3,7 @@ module github.com/go-idp/agent
 go 1.22.1
 
 require (
-	github.com/go-idp/pipeline v1.4.5
+	github.com/go-idp/pipeline v1.4.6
 	github.com/go-zoox/chalk v1.0.2
 	github.com/go-zoox/cli v1.4.0
 	github.com/go-zoox/command v1.7.0

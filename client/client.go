@@ -338,19 +338,22 @@ func (c *client) TerminalURL(path ...string) string {
 }
 
 func (c *client) RunPipeline(p *pipeline.Pipeline) error {
-	s := pipelineClient.New(&pipelineClient.Config{
+	pc := pipelineClient.New(&pipelineClient.Config{
 		Server:   c.cfg.Server,
 		Username: c.cfg.ClientID,
 		Password: c.cfg.ClientSecret,
 		Path:     constants.DefaultPipelinePath,
 	})
 
-	if err := s.Connect(); err != nil {
+	pc.SetStdout(c.stdout)
+	pc.SetStderr(c.stderr)
+
+	if err := pc.Connect(); err != nil {
 		return err
 	}
-	defer s.Close()
+	defer pc.Close()
 
-	return s.Run(p)
+	return pc.Run(p)
 }
 
 func NewBufWriter() *BufWriter {
