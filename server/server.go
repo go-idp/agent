@@ -7,6 +7,7 @@ import (
 	"github.com/go-idp/agent"
 	"github.com/go-idp/agent/constants"
 	"github.com/go-idp/agent/entities"
+	pipeline "github.com/go-idp/pipeline/svc/server"
 	"github.com/go-zoox/chalk"
 	"github.com/go-zoox/datetime"
 	"github.com/go-zoox/fs"
@@ -257,6 +258,14 @@ func (s *server) Run() error {
 				})
 			})
 		}
+	}
+
+	{ // Pipeline
+		pipeline.Mount(app, func(cfg *pipeline.MountConfig) {
+			cfg.Path = constants.DefaultPipelinePath
+			cfg.Workdir = s.cfg.WorkDir
+			cfg.Environment = s.cfg.Environment
+		})
 	}
 
 	app.Post("/exec", func(ctx *zoox.Context) {

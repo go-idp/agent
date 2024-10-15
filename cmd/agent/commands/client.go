@@ -7,10 +7,12 @@ import (
 
 	"github.com/go-idp/agent/client"
 	"github.com/go-idp/agent/entities"
+	"github.com/go-idp/pipeline"
 	"github.com/go-zoox/cli"
 	"github.com/go-zoox/core-utils/regexp"
 	"github.com/go-zoox/fetch"
 	"github.com/go-zoox/fs"
+	"github.com/go-zoox/fs/type/yaml"
 	"github.com/go-zoox/logger"
 )
 
@@ -75,6 +77,11 @@ func RegistryClient(app *cli.MultipleProgram) {
 				Name:    "workdir-base",
 				Usage:   "specify workdir base, which to run workdir = workdirbase + id",
 				EnvVars: []string{"CAAS_WORKDIR_BASE"},
+			},
+			&cli.StringFlag{
+				Name:    "pipeline",
+				Usage:   "specify pipeline",
+				EnvVars: []string{"CAAS_PIPELINE"},
 			},
 		},
 		Action: func(ctx *cli.Context) (err error) {
@@ -175,10 +182,30 @@ func RegistryClient(app *cli.MultipleProgram) {
 				}
 			}
 
+			// run pipeline
+			if v := ctx.String("pipeline"); v != "" {
+				p := pipeline.Pipeline{}
+
+				if err := yaml.Read(v, &p); err != nil {
+					return fmt.Errorf("failed to read pipeline(file: %s): %s", v, err)
+				}
+
+				c := client.New(&client.Config{
+					Server:       cfg.Server,
+					ClientID:     cfg.ClientID,
+					ClientSecret: cfg.ClientSecret,
+					Stdout:       os.Stdout,
+					Stderr:       os.Stderr,
+				})
+
+				return c.RunPipeline(&p)
+			}
+
 			if script == "" {
 				return fmt.Errorf("script is required")
 			}
 
+			// run exec
 			c := client.New(&client.Config{
 				Server:       cfg.Server,
 				ClientID:     cfg.ClientID,
@@ -186,6 +213,7 @@ func RegistryClient(app *cli.MultipleProgram) {
 				Stdout:       os.Stdout,
 				Stderr:       os.Stderr,
 			})
+
 			if err := c.Connect(); err != nil {
 				logger.Debugf("failed to connect to server: %s", err)
 				return fmt.Errorf("failed to connect server(%s): %s", ctx.String("server"), err)

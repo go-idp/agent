@@ -13,6 +13,8 @@ import (
 
 	"github.com/go-idp/agent/constants"
 	"github.com/go-idp/agent/entities"
+	"github.com/go-idp/pipeline"
+	pipelineClient "github.com/go-idp/pipeline/svc/client"
 	"github.com/go-zoox/core-utils/strings"
 	"github.com/go-zoox/logger"
 	"github.com/go-zoox/safe"
@@ -30,6 +32,8 @@ type Client interface {
 	Output(command *entities.Command) (response string, err error)
 	//
 	TerminalURL(path ...string) string
+	//
+	RunPipeline(p *pipeline.Pipeline) error
 }
 
 type ExitError struct {
@@ -331,6 +335,22 @@ func (c *client) TerminalURL(path ...string) string {
 	u.Path = u.Path + terminalPath
 
 	return u.String()
+}
+
+func (c *client) RunPipeline(p *pipeline.Pipeline) error {
+	s := pipelineClient.New(&pipelineClient.Config{
+		Server:   c.cfg.Server,
+		Username: c.cfg.ClientID,
+		Password: c.cfg.ClientSecret,
+		Path:     constants.DefaultPipelinePath,
+	})
+
+	if err := s.Connect(); err != nil {
+		return err
+	}
+	defer s.Close()
+
+	return s.Run(p)
 }
 
 func NewBufWriter() *BufWriter {
