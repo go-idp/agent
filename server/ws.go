@@ -257,12 +257,20 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 						return nil
 					}
 					defer func() {
-						// @TODO clean workdir
-						if cfg.IsAutoCleanWorkDir {
-							if fs.IsExist(cmdCfg.WorkDir) {
+						if !cfg.IsCleanWorkDirDisabled {
+							if ok := fs.IsExist(cmdCfg.WorkDir); ok {
 								logger.Infof("[command] clean work dir: %s", cmdCfg.WorkDir)
 								if err := fs.Remove(cmdCfg.WorkDir); err != nil {
-									panic(fmt.Errorf("failed to clean workdir(%s): %s", cmdCfg.WorkDir, err))
+									logger.Warnf("failed to clean workdir(%s): %s", cmdCfg.WorkDir, err)
+								}
+							}
+						}
+
+						if !cfg.IsCleanMetadataDirDisabled {
+							if ok := fs.IsExist(cmdCfg.MetadataDir); ok {
+								logger.Infof("[command] clean metadata dir: %s", cmdCfg.WorkDir)
+								if err := fs.Remove(cmdCfg.WorkDir); err != nil {
+									logger.Warnf("failed to clean metadatadir(%s): %s", cmdCfg.WorkDir, err)
 								}
 							}
 						}
