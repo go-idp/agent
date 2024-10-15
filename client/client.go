@@ -21,6 +21,12 @@ import (
 	"github.com/go-zoox/websocket"
 )
 
+// ModeCommand is the mode of client
+const ModeCommand = "command"
+
+// ModePipeline is the mode of client
+const ModePipeline = "pipeline"
+
 // Client is the interface of caas client
 type Client interface {
 	Connect() error
@@ -72,6 +78,9 @@ type Config struct {
 
 	// ExecTimeout is the timeout of command execution
 	ExecTimeout time.Duration `config:"exec_timeout"`
+
+	// Mode is the mode of client, can be "pipeline" or "command"
+	Mode string `config:"mode"`
 }
 
 type client struct {
@@ -89,6 +98,9 @@ type client struct {
 	isAuthenticated bool
 	authErrCh       chan error
 	authDoneCh      chan struct{}
+
+	//
+	pipelineClient pipelineClient.Client
 }
 
 // New creates a new caas client
@@ -128,6 +140,22 @@ func (c *client) Connect() (err error) {
 		return fmt.Errorf("invalid caas server address: %s", err)
 	}
 	logger.Debugf("connecting to %s", u.String())
+
+	if c.cfg.Mode == ModePipeline {
+		pc := pipelineClient.New(&pipelineClient.Config{
+			Server:   c.cfg.Server,
+			Username: c.cfg.ClientID,
+			Password: c.cfg.ClientSecret,
+			Path:     constants.DefaultPipelinePath,
+		})
+
+		pc.SetStdout(c.stdout)
+		pc.SetStderr(c.stderr)
+
+		c.pipelineClient = pc
+
+		return pc.Connect()
+	}
 
 	wc, err := websocket.NewClient(func(opt *websocket.ClientOption) {
 		opt.Context = context.Background()
@@ -311,6 +339,10 @@ func (c *client) Output(command *entities.Command) (response string, err error) 
 }
 
 func (c *client) Close() error {
+	if c.pipelineClient != nil {
+		return c.pipelineClient.Close()
+	}
+
 	return safe.Do(func() error {
 		c.closeCh <- struct{}{}
 		close(c.closeCh)
@@ -338,22 +370,7 @@ func (c *client) TerminalURL(path ...string) string {
 }
 
 func (c *client) RunPipeline(p *pipeline.Pipeline) error {
-	pc := pipelineClient.New(&pipelineClient.Config{
-		Server:   c.cfg.Server,
-		Username: c.cfg.ClientID,
-		Password: c.cfg.ClientSecret,
-		Path:     constants.DefaultPipelinePath,
-	})
-
-	pc.SetStdout(c.stdout)
-	pc.SetStderr(c.stderr)
-
-	if err := pc.Connect(); err != nil {
-		return err
-	}
-	defer pc.Close()
-
-	return pc.Run(p)
+	return c.pipelineClient.Run(p)
 }
 
 func NewBufWriter() *BufWriter {

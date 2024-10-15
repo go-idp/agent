@@ -182,37 +182,22 @@ func RegistryClient(app *cli.MultipleProgram) {
 				}
 			}
 
-			// run pipeline
-			if v := ctx.String("pipeline"); v != "" {
-				p := pipeline.Pipeline{}
-
-				if err := yaml.Read(v, &p); err != nil {
-					return fmt.Errorf("failed to read pipeline(file: %s): %s", v, err)
-				}
-
-				c := client.New(&client.Config{
-					Server:       cfg.Server,
-					ClientID:     cfg.ClientID,
-					ClientSecret: cfg.ClientSecret,
-					Stdout:       os.Stdout,
-					Stderr:       os.Stderr,
-				})
-
-				return c.RunPipeline(&p)
-			}
-
-			if script == "" {
-				return fmt.Errorf("script is required")
-			}
-
-			// run exec
-			c := client.New(&client.Config{
+			clientCfg := &client.Config{
 				Server:       cfg.Server,
 				ClientID:     cfg.ClientID,
 				ClientSecret: cfg.ClientSecret,
 				Stdout:       os.Stdout,
 				Stderr:       os.Stderr,
-			})
+			}
+
+			// run pipeline
+			if v := ctx.String("pipeline"); v != "" {
+				clientCfg.Mode = client.ModePipeline
+			} else {
+				clientCfg.Mode = client.ModeCommand
+			}
+
+			c := client.New(clientCfg)
 
 			if err := c.Connect(); err != nil {
 				logger.Debugf("failed to connect to server: %s", err)
@@ -220,20 +205,38 @@ func RegistryClient(app *cli.MultipleProgram) {
 			}
 			defer c.Close()
 
-			err = c.Exec(&entities.Command{
-				ID:          ctx.String("job-id"),
-				Script:      script,
-				Environment: environment,
-				WorkDirBase: ctx.String("workdir-base"),
-				//
-				User: ctx.String("user"),
-			})
-			if errx, ok := err.(*client.ExitError); ok {
-				os.Exit(errx.ExitCode)
-				return
-			}
+			// run pipeline
+			if clientCfg.Mode == client.ModePipeline {
+				p := pipeline.Pipeline{}
 
-			return err
+				if err := yaml.Read(ctx.String("pipeline"), &p); err != nil {
+					return fmt.Errorf("failed to read pipeline(file: %s): %s", ctx.String("pipeline"), err)
+				}
+
+				return c.RunPipeline(&p)
+			} else if clientCfg.Mode == client.ModeCommand {
+				// run command (exec)
+				if script == "" {
+					return fmt.Errorf("script is required")
+				}
+
+				err = c.Exec(&entities.Command{
+					ID:          ctx.String("job-id"),
+					Script:      script,
+					Environment: environment,
+					WorkDirBase: ctx.String("workdir-base"),
+					//
+					User: ctx.String("user"),
+				})
+				if errx, ok := err.(*client.ExitError); ok {
+					os.Exit(errx.ExitCode)
+					return
+				}
+
+				return err
+			} else {
+				return fmt.Errorf("invalid mode: %s", clientCfg.Mode)
+			}
 		},
 	})
 }

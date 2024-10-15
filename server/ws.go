@@ -191,6 +191,19 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 						return nil
 					}
 
+					if commandN.Pipeline != nil {
+						commandN.Pipeline.SetStdout(&WSClientWriter{Conn: conn, Flag: entities.MessageCommandStdout})
+						if err := commandN.Pipeline.Run(conn.Context()); err != nil {
+							logger.Errorf("failed to run pipeline: %s", err)
+
+							conn.WriteTextMessage(append([]byte{entities.MessageCommandStderr}, []byte("failed to run pipeline\n")...))
+							conn.WriteTextMessage([]byte{entities.MessageCommandExitCode, byte(1)})
+							return nil
+						}
+
+						return nil
+					}
+
 					dc, err := dcommand.New(func(c *dcommand.Config) {
 						c.ID = commandN.ID
 						if c.ID == "" {

@@ -1,5 +1,7 @@
 package entities
 
+import "github.com/go-idp/pipeline"
+
 // Command is the request for command
 type Command struct {
 	ID          string            `json:"id"`
@@ -20,4 +22,6 @@ type Command struct {
 	Privileged bool    `json:"privileged"`
 	// Timeout is the timeout of command, in milliseconds
 	Timeout int64 `json:"timeout"`
+
+	Pipeline *pipeline.Pipeline `json:"pipeline"`
 }
