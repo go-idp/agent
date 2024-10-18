@@ -370,6 +370,10 @@ func (c *client) TerminalURL(path ...string) string {
 }
 
 func (c *client) RunPipeline(p *pipeline.Pipeline) error {
+	if c.cfg.Mode != ModePipeline {
+		return fmt.Errorf("invalid mode: %s", c.cfg.Mode)
+	}
+
 	return c.pipelineClient.Run(p)
 }
 
