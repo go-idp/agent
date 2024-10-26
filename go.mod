@@ -3,7 +3,6 @@ module github.com/go-idp/agent
 go 1.22.1
 
 require (
-	github.com/go-idp/pipeline v1.4.9
 	github.com/go-zoox/chalk v1.0.2
 	github.com/go-zoox/cli v1.4.0
 	github.com/go-zoox/command v1.8.2
@@ -115,6 +114,7 @@ require (
 	golang.org/x/text v0.19.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240513163218-0867130af1f8 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240701130421-f6361c86f094 // indirect
 	google.golang.org/protobuf v1.34.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

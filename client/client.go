@@ -13,8 +13,10 @@ import (
 
 	"github.com/go-idp/agent/constants"
 	"github.com/go-idp/agent/entities"
-	"github.com/go-idp/pipeline"
-	pipelineClient "github.com/go-idp/pipeline/svc/client"
+
+	// "github.com/go-idp/pipeline"
+	// pipelineClient "github.com/go-idp/pipeline/svc/client"
+
 	"github.com/go-zoox/core-utils/strings"
 	"github.com/go-zoox/logger"
 	"github.com/go-zoox/safe"
@@ -39,7 +41,7 @@ type Client interface {
 	//
 	TerminalURL(path ...string) string
 	//
-	RunPipeline(p *pipeline.Pipeline) error
+	// RunPipeline(p *pipeline.Pipeline) error
 }
 
 type ExitError struct {
@@ -99,8 +101,8 @@ type client struct {
 	authErrCh       chan error
 	authDoneCh      chan struct{}
 
-	//
-	pipelineClient pipelineClient.Client
+	// //
+	// pipelineClient pipelineClient.Client
 }
 
 // New creates a new caas client
@@ -141,21 +143,21 @@ func (c *client) Connect() (err error) {
 	}
 	logger.Debugf("connecting to %s", u.String())
 
-	if c.cfg.Mode == ModePipeline {
-		pc := pipelineClient.New(&pipelineClient.Config{
-			Server:   c.cfg.Server,
-			Username: c.cfg.ClientID,
-			Password: c.cfg.ClientSecret,
-			Path:     constants.DefaultPipelinePath,
-		})
+	// if c.cfg.Mode == ModePipeline {
+	// 	pc := pipelineClient.New(&pipelineClient.Config{
+	// 		Server:   c.cfg.Server,
+	// 		Username: c.cfg.ClientID,
+	// 		Password: c.cfg.ClientSecret,
+	// 		Path:     constants.DefaultPipelinePath,
+	// 	})
 
-		pc.SetStdout(c.stdout)
-		pc.SetStderr(c.stderr)
+	// 	pc.SetStdout(c.stdout)
+	// 	pc.SetStderr(c.stderr)
 
-		c.pipelineClient = pc
+	// 	c.pipelineClient = pc
 
-		return pc.Connect()
-	}
+	// 	return pc.Connect()
+	// }
 
 	wc, err := websocket.NewClient(func(opt *websocket.ClientOption) {
 		opt.Context = context.Background()
@@ -339,9 +341,9 @@ func (c *client) Output(command *entities.Command) (response string, err error) 
 }
 
 func (c *client) Close() error {
-	if c.pipelineClient != nil {
-		return c.pipelineClient.Close()
-	}
+	// if c.pipelineClient != nil {
+	// 	return c.pipelineClient.Close()
+	// }
 
 	return safe.Do(func() error {
 		c.closeCh <- struct{}{}
@@ -369,13 +371,13 @@ func (c *client) TerminalURL(path ...string) string {
 	return u.String()
 }
 
-func (c *client) RunPipeline(p *pipeline.Pipeline) error {
-	if c.cfg.Mode != ModePipeline {
-		return fmt.Errorf("invalid mode: %s", c.cfg.Mode)
-	}
+// func (c *client) RunPipeline(p *pipeline.Pipeline) error {
+// 	if c.cfg.Mode != ModePipeline {
+// 		return fmt.Errorf("invalid mode: %s", c.cfg.Mode)
+// 	}
 
-	return c.pipelineClient.Run(p)
-}
+// 	return c.pipelineClient.Run(p)
+// }
 
 func NewBufWriter() *BufWriter {
 	return &BufWriter{
