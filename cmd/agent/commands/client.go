@@ -10,6 +10,7 @@ import (
 	"github.com/go-idp/pipeline"
 	"github.com/go-zoox/cli"
 	"github.com/go-zoox/core-utils/regexp"
+	"github.com/go-zoox/debug"
 	"github.com/go-zoox/fetch"
 	"github.com/go-zoox/fs"
 	"github.com/go-zoox/fs/type/yaml"
@@ -207,9 +208,29 @@ func RegistryClient(app *cli.MultipleProgram) {
 
 			// run pipeline
 			if clientCfg.Mode == client.ModePipeline {
+				config := ctx.String("pipeline")
+				if ok := regexp.Match(`^https?://`, config); ok {
+					url := config
+					config = fs.TmpFilePath() + ".yaml"
+					response, err := fetch.Get(url)
+					if err != nil {
+						return fmt.Errorf("failed to fetch config(url: %s): %s", url, err)
+					}
+
+					if err := fs.WriteFile(config, []byte(response.String())); err != nil {
+						return fmt.Errorf("failed to write config(file: %s): %s", config, err)
+					}
+
+					if !debug.IsDebugMode() {
+						defer fs.RemoveFile(config)
+					} else {
+						logger.Infof("load config from %s to %s", url, config)
+					}
+				}
+
 				p := pipeline.Pipeline{}
 
-				if err := yaml.Read(ctx.String("pipeline"), &p); err != nil {
+				if err := yaml.Read(config, &p); err != nil {
 					return fmt.Errorf("failed to read pipeline(file: %s): %s", ctx.String("pipeline"), err)
 				}
 
