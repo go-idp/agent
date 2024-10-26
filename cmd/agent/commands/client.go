@@ -76,11 +76,11 @@ func RegistryClient(app *cli.MultipleProgram) {
 				Usage:   "specify workdir base, which to run workdir = workdirbase + id",
 				EnvVars: []string{"CAAS_WORKDIR_BASE"},
 			},
-			&cli.StringFlag{
-				Name:    "pipeline",
-				Usage:   "specify pipeline",
-				EnvVars: []string{"CAAS_PIPELINE"},
-			},
+			// &cli.StringFlag{
+			// 	Name:    "pipeline",
+			// 	Usage:   "specify pipeline",
+			// 	EnvVars: []string{"CAAS_PIPELINE"},
+			// },
 		},
 		Action: func(ctx *cli.Context) (err error) {
 			cfg := &Config{}
