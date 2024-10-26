@@ -3,11 +3,11 @@ package idp
 import (
 	"errors"
 
-	idp "github.com/go-idp/agent/client"
+	"github.com/go-idp/agent/client"
 )
 
 // create creates the engine.
-func (c *caas) create() error {
+func (c *idp) create() error {
 	if c.client != nil {
 		return errors.New("command: already created")
 	}
@@ -16,7 +16,7 @@ func (c *caas) create() error {
 		return errors.New("command: server is required")
 	}
 
-	c.client = idp.New(&idp.Config{
+	c.client = client.New(&client.Config{
 		Server:       c.cfg.Server,
 		ClientID:     c.cfg.ClientID,
 		ClientSecret: c.cfg.ClientSecret,

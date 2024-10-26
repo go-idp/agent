@@ -7,7 +7,7 @@ import (
 )
 
 // Wait waits for the command to finish.
-func (c *caas) Wait() error {
+func (c *idp) Wait() error {
 	if len(c.cfg.AllowedSystemEnvKeys) != 0 {
 		for _, key := range c.cfg.AllowedSystemEnvKeys {
 			if c.cfg.Environment[key] == "" {

@@ -6,7 +6,7 @@ import (
 	"github.com/go-zoox/logger"
 )
 
-func (c *caas) Start() error {
+func (c *idp) Start() error {
 	if err := c.client.Connect(); err != nil {
 		logger.Debugf("failed to connect to server: %s", err)
 		return fmt.Errorf("failed to connect server(%s)", c.cfg.Server)

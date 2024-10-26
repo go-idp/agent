@@ -7,6 +7,6 @@ import (
 )
 
 // Terminal returns a terminal.
-func (c *caas) Terminal() (terminal.Terminal, error) {
+func (c *idp) Terminal() (terminal.Terminal, error) {
 	return nil, errors.New("not supported")
 }

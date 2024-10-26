@@ -1,5 +1,5 @@
 package idp
 
-func (c *caas) Cancel() error {
+func (c *idp) Cancel() error {
 	return c.client.Close()
 }

@@ -4,18 +4,18 @@ import (
 	"io"
 	"os"
 
-	idp "github.com/go-idp/agent/client"
+	"github.com/go-idp/agent/client"
 	"github.com/go-zoox/command/engine"
 )
 
 // Name is the name of the engine.
-const Name = "caas"
+const Name = "idp"
 
-type caas struct {
+type idp struct {
 	//
 	cfg *Config
 	//
-	client idp.Client
+	client client.Client
 
 	//
 	stdin  io.Reader
@@ -25,7 +25,7 @@ type caas struct {
 
 // New creates a new caas engine.
 func New(cfg *Config) (engine.Engine, error) {
-	c := &caas{
+	c := &idp{
 		cfg: cfg,
 		//
 		stdin:  os.Stdin,
