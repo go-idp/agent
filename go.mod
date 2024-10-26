@@ -6,7 +6,7 @@ require (
 	github.com/go-idp/pipeline v1.4.9
 	github.com/go-zoox/chalk v1.0.2
 	github.com/go-zoox/cli v1.4.0
-	github.com/go-zoox/command v1.7.0
+	github.com/go-zoox/command v1.8.2
 	github.com/go-zoox/core-utils v1.4.11
 	github.com/go-zoox/datetime v1.3.1
 	github.com/go-zoox/debug v1.0.5
