@@ -35,4 +35,10 @@ type Config struct {
 
 	//
 	IsAutoReport bool `config:"is_auto_report"`
+	//
+	allowReportFunc func(script string, environment map[string]string) bool
+}
+
+func (c *Config) SetAllowReportFunc(f func(script string, environment map[string]string) bool) {
+	c.allowReportFunc = f
 }

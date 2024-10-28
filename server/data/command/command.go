@@ -38,6 +38,8 @@ type Command struct {
 
 	//
 	IsAutoReport bool
+	//
+	allowReportFunc func(script string, environment map[string]string) bool
 }
 
 type State struct {
@@ -81,6 +83,12 @@ type Config struct {
 	Command *entities.Command `json:"command"`
 
 	IsAutoReport bool
+	//
+	allowReportFunc func(script string, environment map[string]string) bool
+}
+
+func (c *Config) SetAllowReportFunc(f func(script string, environment map[string]string) bool) {
+	c.allowReportFunc = f
 }
 
 type Option func(*Config)
@@ -104,6 +112,8 @@ func New(opts ...Option) (*Command, error) {
 		event: eventemitter.New(),
 		//
 		IsAutoReport: opt.IsAutoReport,
+		//
+		allowReportFunc: opt.allowReportFunc,
 	}, nil
 }
 
@@ -122,18 +132,25 @@ func (c *Command) Run() error {
 	}
 
 	if c.IsAutoReport {
-		approval, err := tidp.Report(&tidp.ReportRequest{
-			Script:      c.Cmd.Script,
-			Environment: c.Cmd.Environment,
-		})
-		if err == nil {
-			if delay := approval.Delay(); delay > 0 {
-				time.Sleep(delay)
-			}
+		isAllowReport := true
+		if c.allowReportFunc != nil {
+			isAllowReport = c.allowReportFunc(c.Cmd.Script, c.Cmd.Environment)
+		}
 
-			if ok := approval.Approved(); !ok {
-				// c.event.Emit("error", fmt.Errorf("failed to run command (approval): %s", approval.Reason()))
-				return fmt.Errorf("failed to run command (tidp): %s", approval.Reason())
+		if isAllowReport {
+			approval, err := tidp.Report(&tidp.ReportRequest{
+				Script:      c.Cmd.Script,
+				Environment: c.Cmd.Environment,
+			})
+			if err == nil {
+				if delay := approval.Delay(); delay > 0 {
+					time.Sleep(delay)
+				}
+
+				if ok := approval.Approved(); !ok {
+					// c.event.Emit("error", fmt.Errorf("failed to run command (approval): %s", approval.Reason()))
+					return fmt.Errorf("failed to run command (tidp): %s", approval.Reason())
+				}
 			}
 		}
 	}

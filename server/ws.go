@@ -238,6 +238,7 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 
 						if cfg.IsAutoReport {
 							c.IsAutoReport = cfg.IsAutoReport
+							c.SetAllowReportFunc(cfg.allowReportFunc)
 						}
 					})
 					if err != nil {
