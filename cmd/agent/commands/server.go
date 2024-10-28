@@ -116,6 +116,11 @@ func RegistryServer(app *cli.MultipleProgram) {
 				Usage:   "specify terminal relay",
 				EnvVars: []string{"CAAS_TERMINAL_RELAY"},
 			},
+			&cli.BoolFlag{
+				Name:    "auto-report",
+				Usage:   "Auto report command status",
+				EnvVars: []string{"CAAS_AUTO_REPORT"},
+			},
 		},
 		Action: func(ctx *cli.Context) (err error) {
 			cfg := &server.Config{}
@@ -202,6 +207,10 @@ func RegistryServer(app *cli.MultipleProgram) {
 
 			if ctx.String("terminal-relay") != "" {
 				cfg.TerminalRelay = ctx.String("terminal-relay")
+			}
+
+			if v := ctx.Bool("auto-report"); v {
+				cfg.IsAutoReport = true
 			}
 
 			if cfg.Port == 0 {

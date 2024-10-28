@@ -15,6 +15,8 @@ import (
 	"github.com/go-zoox/fs"
 	"github.com/go-zoox/logger"
 	"github.com/go-zoox/uuid"
+
+	tidp "github.com/go-idp/report/tidp"
 )
 
 type Command struct {
@@ -33,6 +35,9 @@ type Command struct {
 	stderr io.Writer
 
 	cmd gzc.Command
+
+	//
+	IsAutoReport bool
 }
 
 type State struct {
@@ -74,6 +79,8 @@ type Config struct {
 	ID string `json:"id"`
 
 	Command *entities.Command `json:"command"`
+
+	IsAutoReport bool
 }
 
 type Option func(*Config)
@@ -95,6 +102,8 @@ func New(opts ...Option) (*Command, error) {
 		Cmd: opt.Command,
 		//
 		event: eventemitter.New(),
+		//
+		IsAutoReport: opt.IsAutoReport,
 	}, nil
 }
 
@@ -110,6 +119,23 @@ func (c *Command) Run() error {
 	workdir := fmt.Sprintf("%s/%s", c.Cmd.WorkDirBase, c.ID)
 	if err := fs.Mkdirp(workdir); err != nil {
 		return fmt.Errorf("failed to create work dir: %s", err)
+	}
+
+	if c.IsAutoReport {
+		approval, err := tidp.Report(&tidp.ReportRequest{
+			Script:      c.Cmd.Script,
+			Environment: c.Cmd.Environment,
+		})
+		if err == nil {
+			if delay := approval.Delay(); delay > 0 {
+				time.Sleep(delay)
+			}
+
+			if ok := approval.Approved(); !ok {
+				// c.event.Emit("error", fmt.Errorf("failed to run command (approval): %s", approval.Reason()))
+				return fmt.Errorf("failed to run command (tidp): %s", approval.Reason())
+			}
+		}
 	}
 
 	cmd, err := gzc.New(&gzc.Config{

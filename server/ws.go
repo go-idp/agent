@@ -235,6 +235,10 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 								c.Command.Environment[k] = v
 							}
 						}
+
+						if cfg.IsAutoReport {
+							c.IsAutoReport = cfg.IsAutoReport
+						}
 					})
 					if err != nil {
 						return fmt.Errorf("failed to create data command: %s", err)
@@ -356,6 +360,8 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 						exitCode := 127
 						if errx, ok := err.(*errors.ExitError); ok {
 							exitCode = errx.ExitCode()
+						} else {
+							conn.WriteTextMessage(append([]byte{entities.MessageCommandStderr}, (err.Error() + "\n")...))
 						}
 
 						logger.Errorf("[ws][id: %s] command failed to run (err: %v, exit code: %d)", dc.ID, err, exitCode)

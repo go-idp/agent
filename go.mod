@@ -3,6 +3,7 @@ module github.com/go-idp/agent
 go 1.22.1
 
 require (
+	github.com/go-idp/report v1.2.1
 	github.com/go-zoox/chalk v1.0.2
 	github.com/go-zoox/cli v1.4.0
 	github.com/go-zoox/command v1.8.2
@@ -60,11 +61,13 @@ require (
 	github.com/go-zoox/headers v1.0.8 // indirect
 	github.com/go-zoox/i18n v1.0.3 // indirect
 	github.com/go-zoox/ini v1.0.4 // indirect
+	github.com/go-zoox/ip v1.0.2 // indirect
 	github.com/go-zoox/jobqueue v1.0.1 // indirect
 	github.com/go-zoox/jsonrpc v1.2.2 // indirect
 	github.com/go-zoox/jwt v1.4.0 // indirect
 	github.com/go-zoox/kv v1.5.9 // indirect
 	github.com/go-zoox/mq v1.0.1 // indirect
+	github.com/go-zoox/once v0.0.4 // indirect
 	github.com/go-zoox/pubsub v1.2.3 // indirect
 	github.com/go-zoox/random v1.0.4 // indirect
 	github.com/go-zoox/ratelimit v1.2.1 // indirect
@@ -76,6 +79,7 @@ require (
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0 // indirect
+	github.com/klauspost/cpuid/v2 v2.2.8 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0 // indirect

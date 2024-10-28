@@ -32,4 +32,7 @@ type Config struct {
 	TerminalInitCommand string `config:"terminal_init_command"`
 	//
 	TerminalRelay string `config:"terminal_relay"`
+
+	//
+	IsAutoReport bool `config:"is_auto_report"`
 }
