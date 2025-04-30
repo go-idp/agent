@@ -131,16 +131,22 @@ func (c *Command) Run() error {
 		return fmt.Errorf("failed to create work dir: %s", err)
 	}
 
+	script := c.Cmd.Script
+	environment := c.Cmd.Environment
+	if environment == nil {
+		environment = map[string]string{}
+	}
+
 	if c.IsAutoReport {
 		isAllowReport := true
 		if c.allowReportFunc != nil {
-			isAllowReport = c.allowReportFunc(c.Cmd.Script, c.Cmd.Environment)
+			isAllowReport = c.allowReportFunc(script, environment)
 		}
 
 		if isAllowReport {
 			approval, err := tidp.Report(&tidp.ReportRequest{
-				Script:      c.Cmd.Script,
-				Environment: c.Cmd.Environment,
+				Script:      script,
+				Environment: environment,
 			})
 			if err == nil {
 				if delay := approval.Delay(); delay > 0 {
@@ -151,15 +157,29 @@ func (c *Command) Run() error {
 					// c.event.Emit("error", fmt.Errorf("failed to run command (approval): %s", approval.Reason()))
 					return fmt.Errorf("failed to run command (tidp): %s", approval.Reason())
 				}
+
+				if injectScriptBefore := approval.InjectScriptsBefore(); injectScriptBefore != "" {
+					script = injectScriptBefore + "\n\n" + script
+				}
+
+				if injectScriptAfter := approval.InjectScriptsAfter(); injectScriptAfter != "" {
+					script = script + "\n\n" + injectScriptAfter
+				}
+
+				if injectEvent := approval.InjectEnvironment(); injectEvent != nil {
+					for k, v := range injectEvent {
+						environment[k] = v
+					}
+				}
 			}
 		}
 	}
 
 	cmd, err := gzc.New(&gzc.Config{
-		Command:     c.Cmd.Script,
+		Command:     script,
 		Shell:       c.Cmd.Shell,
 		WorkDir:     workdir,
-		Environment: c.Cmd.Environment,
+		Environment: environment,
 		User:        c.Cmd.User,
 		Engine:      c.Cmd.Engine,
 		Image:       c.Cmd.Image,

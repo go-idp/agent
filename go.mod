@@ -3,7 +3,7 @@ module github.com/go-idp/agent
 go 1.22.1
 
 require (
-	github.com/go-idp/report v1.2.2
+	github.com/go-idp/report v1.2.4
 	github.com/go-zoox/chalk v1.0.2
 	github.com/go-zoox/cli v1.4.0
 	github.com/go-zoox/command v1.8.2
