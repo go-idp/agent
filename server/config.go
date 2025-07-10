@@ -25,7 +25,7 @@ type Config struct {
 	IsCleanMetadataDirDisabled bool `config:"is_clean_metadatadir_disabled"`
 
 	// Terminal
-	TerminalPath        string `config:"terminal_path"`
+	TerminalPath        string `config:"terminal_path,default=/terminal"`
 	TerminalShell       string `config:"terminal_shell"`
 	TerminalDriver      string `config:"terminal_driver"`
 	TerminalDriverImage string `config:"terminal_driver_image"`

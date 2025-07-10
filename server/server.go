@@ -206,9 +206,9 @@ func (s *server) Run() error {
 
 	{ // Web Terminal
 
-		app.Get("/wt", func(ctx *zoox.Context) {
+		app.Get(s.cfg.TerminalPath, func(ctx *zoox.Context) {
 			ctx.HTML(200, terminal.RenderXTerm(zoox.H{
-				"wsPath": constants.DefaultTerminalPath,
+				"wsPath": s.cfg.TerminalPath,
 			}))
 		})
 
@@ -234,7 +234,7 @@ func (s *server) Run() error {
 				return fmt.Errorf("failed to create terminal server: %s", err)
 			}
 
-			app.WebSocket("/terminal", func(opt *zoox.WebSocketOption) {
+			app.WebSocket(s.cfg.TerminalPath, func(opt *zoox.WebSocketOption) {
 				opt.Server = server
 
 				opt.Middlewares = append(opt.Middlewares, func(ctx *zoox.Context) {

@@ -13,13 +13,13 @@ require (
 	github.com/go-zoox/eventemitter v1.4.1
 	github.com/go-zoox/fetch v1.8.3
 	github.com/go-zoox/fs v1.3.15
-	github.com/go-zoox/logger v1.6.2
+	github.com/go-zoox/logger v1.6.3
 	github.com/go-zoox/proxy v1.5.6
 	github.com/go-zoox/safe v1.2.0
 	github.com/go-zoox/terminal v1.9.0
 	github.com/go-zoox/uuid v0.0.1
 	github.com/go-zoox/websocket v1.3.5
-	github.com/go-zoox/zoox v1.15.17
+	github.com/go-zoox/zoox v1.16.2
 	golang.org/x/term v0.25.0
 )
 
