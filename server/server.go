@@ -243,6 +243,7 @@ func (s *server) Run() error {
 		} else {
 			server, err := terminal.Serve(&terminal.Config{
 				Shell:       s.cfg.TerminalShell,
+				User:        s.cfg.TerminalUser,
 				Driver:      s.cfg.TerminalDriver,
 				DriverImage: s.cfg.TerminalDriverImage,
 				InitCommand: s.cfg.TerminalInitCommand,

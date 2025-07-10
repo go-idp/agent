@@ -27,6 +27,7 @@ type Config struct {
 	// Terminal
 	TerminalPath        string `config:"terminal_path,default=/terminal"`
 	TerminalShell       string `config:"terminal_shell"`
+	TerminalUser        string `config:"terminal_user"`
 	TerminalDriver      string `config:"terminal_driver"`
 	TerminalDriverImage string `config:"terminal_driver_image"`
 	TerminalInitCommand string `config:"terminal_init_command"`

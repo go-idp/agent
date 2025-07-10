@@ -97,6 +97,11 @@ func RegistryServer(app *cli.MultipleProgram) {
 				EnvVars: []string{"CAAS_TERMINAL_SHELL", "SHELL"},
 			},
 			&cli.StringFlag{
+				Name:    "terminal-user",
+				Usage:   "specify terminal user",
+				EnvVars: []string{"CAAS_TERMINAL_USER"},
+			},
+			&cli.StringFlag{
 				Name:    "terminal-driver",
 				Usage:   "specify terminal container",
 				EnvVars: []string{"CAAS_TERMINAL_CONTAINER"},
@@ -191,6 +196,10 @@ func RegistryServer(app *cli.MultipleProgram) {
 
 			if ctx.String("terminal-shell") != "" {
 				cfg.TerminalShell = ctx.String("terminal-shell")
+			}
+
+			if ctx.String("terminal-user") != "" {
+				cfg.TerminalUser = ctx.String("terminal-user")
 			}
 
 			if ctx.String("terminal-driver") != "" {
