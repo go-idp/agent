@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/go-idp/agent"
-	"github.com/go-idp/agent/constants"
 	"github.com/go-idp/agent/entities"
 
 	// pipeline "github.com/go-idp/pipeline/svc/server"
@@ -157,6 +156,34 @@ func (s *server) Run() error {
 
 	app.Use(middleware.Prometheus())
 
+	// auth middleware
+	app.Use(func(ctx *zoox.Context) {
+		// allow access to root path
+		if ctx.Path == "/" {
+			ctx.Next()
+			return
+		}
+
+		if s.cfg.ClientID == "" && s.cfg.ClientSecret == "" {
+			ctx.Next()
+			return
+		}
+
+		user, pass, ok := ctx.Request.BasicAuth()
+		if !ok {
+			ctx.Set("WWW-Authenticate", `Basic realm="go-zoox"`)
+			ctx.Status(401)
+			return
+		}
+
+		if !(user == s.cfg.ClientID && pass == s.cfg.ClientSecret) {
+			ctx.Status(401)
+			return
+		}
+
+		ctx.Next()
+	})
+
 	// clean metadata dir at 3:00 every month
 	app.Cron().AddJob("clean-metadata", "0 3 * 1 *", func() error {
 		if s.cfg.IsCleanMetadataDirDisabled {
@@ -205,7 +232,6 @@ func (s *server) Run() error {
 	})
 
 	{ // Web Terminal
-
 		app.Get(s.cfg.TerminalPath, func(ctx *zoox.Context) {
 			ctx.HTML(200, terminal.RenderXTerm(zoox.H{
 				"wsPath": s.cfg.TerminalPath,
@@ -213,10 +239,10 @@ func (s *server) Run() error {
 		})
 
 		if s.cfg.TerminalRelay != "" {
-			app.Proxy(constants.DefaultTerminalPath, s.cfg.TerminalRelay, func(cfg *zoox.ProxyConfig) {
+			app.Proxy(s.cfg.TerminalPath, s.cfg.TerminalRelay, func(cfg *zoox.ProxyConfig) {
 				cfg.Rewrites = []rewriter.Rewriter{
 					{
-						From: constants.DefaultTerminalPath,
+						From: s.cfg.TerminalPath,
 						To:   "/",
 					},
 				}
@@ -237,26 +263,26 @@ func (s *server) Run() error {
 			app.WebSocket(s.cfg.TerminalPath, func(opt *zoox.WebSocketOption) {
 				opt.Server = server
 
-				opt.Middlewares = append(opt.Middlewares, func(ctx *zoox.Context) {
-					if s.cfg.ClientID == "" && s.cfg.ClientSecret == "" {
-						ctx.Next()
-						return
-					}
+				// opt.Middlewares = append(opt.Middlewares, func(ctx *zoox.Context) {
+				// 	if s.cfg.ClientID == "" && s.cfg.ClientSecret == "" {
+				// 		ctx.Next()
+				// 		return
+				// 	}
 
-					user, pass, ok := ctx.Request.BasicAuth()
-					if !ok {
-						ctx.Set("WWW-Authenticate", `Basic realm="go-zoox"`)
-						ctx.Status(401)
-						return
-					}
+				// 	user, pass, ok := ctx.Request.BasicAuth()
+				// 	if !ok {
+				// 		ctx.Set("WWW-Authenticate", `Basic realm="go-zoox"`)
+				// 		ctx.Status(401)
+				// 		return
+				// 	}
 
-					if !(user == s.cfg.ClientID && pass == s.cfg.ClientSecret) {
-						ctx.Status(401)
-						return
-					}
+				// 	if !(user == s.cfg.ClientID && pass == s.cfg.ClientSecret) {
+				// 		ctx.Status(401)
+				// 		return
+				// 	}
 
-					ctx.Next()
-				})
+				// 	ctx.Next()
+				// })
 			})
 		}
 	}
@@ -269,49 +295,9 @@ func (s *server) Run() error {
 	// 	})
 	// }
 
-	app.Post("/exec", func(ctx *zoox.Context) {
-		if s.cfg.ClientID == "" && s.cfg.ClientSecret == "" {
-			ctx.Next()
-			return
-		}
-
-		user, pass, ok := ctx.Request.BasicAuth()
-		if !ok {
-			ctx.Set("WWW-Authenticate", `Basic realm="go-zoox"`)
-			ctx.Status(401)
-			return
-		}
-
-		if !(user == s.cfg.ClientID && pass == s.cfg.ClientSecret) {
-			ctx.Status(401)
-			return
-		}
-
-		ctx.Next()
-	}, createCommandAPI(s.cfg))
+	app.Post("/exec", createCommandAPI(s.cfg))
 
 	app.Group("/commands", func(group *zoox.RouterGroup) {
-		group.Use(func(ctx *zoox.Context) {
-			if s.cfg.ClientID == "" && s.cfg.ClientSecret == "" {
-				ctx.Next()
-				return
-			}
-
-			user, pass, ok := ctx.Request.BasicAuth()
-			if !ok {
-				ctx.Set("WWW-Authenticate", `Basic realm="go-zoox"`)
-				ctx.Status(401)
-				return
-			}
-
-			if !(user == s.cfg.ClientID && pass == s.cfg.ClientSecret) {
-				ctx.Status(401)
-				return
-			}
-
-			ctx.Next()
-		})
-
 		// latest command
 		group.Get("/latest", getLatestCommandAPI(s.cfg))
 		group.Get("/latest/log", getLatestCommandLogAPI(s.cfg))
