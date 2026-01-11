@@ -71,13 +71,13 @@ func RegistryServer(app *cli.MultipleProgram) {
 				EnvVars: []string{"CAAS_DAEMON"},
 			},
 			&cli.BoolFlag{
-				Name:    "disable-clean-workdir",
-				Usage:   "Disable clean user workdir, default: false",
+				Name:    "enable-clean-workdir",
+				Usage:   "Enable clean user workdir, default: false",
 				EnvVars: []string{"CAAS_DISABLE_CLEAN_USER_WORKDIR"},
 			},
 			&cli.BoolFlag{
-				Name:    "disable-clean-metadatadir",
-				Usage:   "Disable clean metadata dir, default: false",
+				Name:    "enable-clean-metadatadir",
+				Usage:   "Enable clean metadata dir, default: false",
 				EnvVars: []string{"CAAS_DISABLE_CLEAN_METADATADIR"},
 			},
 			&cli.BoolFlag{
@@ -178,12 +178,12 @@ func RegistryServer(app *cli.MultipleProgram) {
 				cfg.ClientSecret = ctx.String("client-secret")
 			}
 
-			if ctx.Bool("disable-clean-workdir") {
-				cfg.IsCleanWorkDirDisabled = ctx.Bool("disable-clean-workdir")
+			if ctx.Bool("enable-clean-workdir") {
+				cfg.IsCleanWorkDirEnabled = ctx.Bool("enable-clean-workdir")
 			}
 
-			if ctx.Bool("disable-clean-metadatadir") {
-				cfg.IsCleanMetadataDirDisabled = ctx.Bool("disable-clean-metadatadir")
+			if ctx.Bool("enable-clean-metadatadir") {
+				cfg.IsCleanMetadataDirEnabled = ctx.Bool("enable-clean-metadatadir")
 			}
 
 			if ctx.Bool("disable-command-cancel-on-close") {

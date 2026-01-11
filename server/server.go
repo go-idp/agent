@@ -177,11 +177,11 @@ func (s *server) Run() error {
 
 	app.Use(middleware.Prometheus())
 
-	// clean metadata dir at 3:00 every month
-	app.Cron().AddJob("clean-metadata", "0 3 * 1 *", func() error {
-		if s.cfg.IsCleanMetadataDirDisabled {
-			return nil
-		}
+	// clean metadata dir at 3:00 first day of every month
+	app.Cron().AddJob("clean-metadata", "0 3 1 * *", func() error {
+		// if !s.cfg.IsCleanMetadataDirEnabled {
+		// 	return nil
+		// }
 
 		if s.cfg.MetadataDir == "" {
 			return nil
@@ -195,11 +195,11 @@ func (s *server) Run() error {
 		return nil
 	})
 
-	// clean work dir at 3:00 every week
-	app.Cron().AddJob("clean-workdir", "0 3 * * 6", func() error {
-		if s.cfg.IsCleanWorkDirDisabled {
-			return nil
-		}
+	// clean work dir at 3:00 first day of every week
+	app.Cron().AddJob("clean-workdir", "0 3 * * 1", func() error {
+		// if !s.cfg.IsCleanWorkDirEnabled {
+		// 	return nil
+		// }
 
 		if s.cfg.WorkDir == "" {
 			return nil

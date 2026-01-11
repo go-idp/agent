@@ -20,9 +20,9 @@ type Config struct {
 	//
 	IsCommandCancelOnCloseDisabled bool `config:"is_command_cancel_on_close_disabled"`
 	//
-	IsCleanWorkDirDisabled bool `config:"is_clean_workdir_disabled"`
+	IsCleanWorkDirEnabled bool `config:"is_clean_workdir_enabled"`
 	//
-	IsCleanMetadataDirDisabled bool `config:"is_clean_metadatadir_disabled"`
+	IsCleanMetadataDirEnabled bool `config:"is_clean_metadatadir_enabled"`
 
 	// Terminal
 	TerminalPath        string `config:"terminal_path,default=/terminal"`

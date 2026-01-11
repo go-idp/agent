@@ -275,7 +275,7 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 						return nil
 					}
 					defer func() {
-						if !cfg.IsCleanWorkDirDisabled {
+						if cfg.IsCleanWorkDirEnabled {
 							if ok := fs.IsExist(cmdCfg.WorkDir); ok {
 								logger.Infof("[command] clean work dir: %s", cmdCfg.WorkDir)
 								if err := fs.Remove(cmdCfg.WorkDir); err != nil {
@@ -284,7 +284,7 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 							}
 						}
 
-						if !cfg.IsCleanMetadataDirDisabled {
+						if cfg.IsCleanMetadataDirEnabled {
 							if ok := fs.IsExist(cmdCfg.MetadataDir); ok {
 								logger.Infof("[command] clean metadata dir: %s", cmdCfg.WorkDir)
 								if err := fs.Remove(cmdCfg.WorkDir); err != nil {
