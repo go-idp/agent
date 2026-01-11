@@ -24,4 +24,9 @@ type Command struct {
 	Timeout int64 `json:"timeout"`
 
 	// Pipeline *pipeline.Pipeline `json:"pipeline"`
+
+	// Enable clean work dir
+	EnableCleanWorkDir bool `json:"enable_clean_workdir"`
+	// Enable clean metadata dir
+	EnableCleanMetadataDir bool `json:"enable_clean_metadata_dir"`
 }
