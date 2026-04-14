@@ -271,6 +271,7 @@ func (s *server) Run() error {
 	// }
 
 	app.Post("/exec", authMiddleware, createCommandAPI(s.cfg))
+	app.Post("/files/append", authMiddleware, appendFileAPI())
 
 	app.Group("/commands", func(group *zoox.RouterGroup) {
 		group.Use(authMiddleware)
