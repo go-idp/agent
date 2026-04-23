@@ -10,7 +10,7 @@ import (
 )
 
 func RegistryServer(app *cli.MultipleProgram) {
-	app.Register("server", &cli.Command{
+	app.Register(&cli.Command{
 		Name:  "server",
 		Usage: "idp agent server",
 		Flags: []cli.Flag{

@@ -21,7 +21,7 @@ type Config struct {
 }
 
 func RegistryClient(app *cli.MultipleProgram) {
-	app.Register("client", &cli.Command{
+	app.Register(&cli.Command{
 		Name:  "client",
 		Usage: "idp agent client",
 		Flags: []cli.Flag{

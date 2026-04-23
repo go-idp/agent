@@ -17,7 +17,7 @@ import (
 )
 
 func RegistryShell(app *cli.MultipleProgram) {
-	app.Register("shell", &cli.Command{
+	app.Register(&cli.Command{
 		Name:  "shell",
 		Usage: "terminal shell for idp agent",
 		Flags: []cli.Flag{
