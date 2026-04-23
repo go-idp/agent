@@ -8,7 +8,6 @@ import (
 
 	"github.com/go-idp/agent/entities"
 	gzc "github.com/go-zoox/command"
-	gzio "github.com/go-zoox/core-utils/io"
 	"github.com/go-zoox/core-utils/safe"
 	"github.com/go-zoox/datetime"
 	"github.com/go-zoox/eventemitter"
@@ -122,9 +121,9 @@ func (c *Command) Run() error {
 		StartedAt: datetime.Now(),
 		Status:    "running",
 	}
-	c.Log = safe.NewList[Log](func(lc *safe.ListConfig) {
-		lc.Capacity = 100
-	})
+	// Keep log file as the source of truth to avoid retaining large command output
+	// chunks in memory for long-lived command objects.
+	c.Log = nil
 
 	workdir := fmt.Sprintf("%s/%s", c.Cmd.WorkDirBase, c.ID)
 	if err := fs.Mkdirp(workdir); err != nil {
@@ -212,22 +211,8 @@ func (c *Command) Run() error {
 		return fmt.Errorf("you should call SetStderr(stderr) first")
 	}
 
-	line := safe.NewInt()
-	logWriter := gzio.WriterWrapFunc(func(p []byte) (n int, err error) {
-		// fmt.Println("logWriter:", string(p))
-		c.Log.Push(Log{
-			ID:            line.Get(),
-			Log:           string(p),
-			TimestampInMS: datetime.Now().UnixMilli(),
-		})
-
-		line.Inc(1)
-
-		// @TODO save to log file, and save to oss
-		return len(p), nil
-	})
-	cmd.SetStdout(io.MultiWriter(c.stdout, logWriter))
-	cmd.SetStderr(io.MultiWriter(c.stderr, logWriter))
+	cmd.SetStdout(c.stdout)
+	cmd.SetStderr(c.stderr)
 
 	c.event.Emit("run", c.ID)
 

@@ -2,11 +2,15 @@ package server
 
 import (
 	"fmt"
+	"io"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/go-idp/agent/entities"
 	dcommand "github.com/go-idp/agent/server/data/command"
+	"github.com/go-zoox/datetime"
+	"github.com/go-zoox/fs"
 	"github.com/go-zoox/uuid"
 	"github.com/go-zoox/zoox"
 )
@@ -80,14 +84,39 @@ func createCommandAPI(cfg *Config) func(ctx *zoox.Context) {
 		commandsIDList.LPush(dc.ID)
 		state.Command.Total.Inc(1)
 
-		dc.SetStdout(os.Stdout)
-		dc.SetStderr(os.Stderr)
+		cmdCfg, err := cfg.GetCommandConfig(dc.ID, commandRequest)
+		if err != nil {
+			ctx.Fail(fmt.Errorf("failed to get command config: %s", err), 500, "failed to get command config")
+			return
+		}
+
+		dc.SetStdout(cmdCfg.Log)
+		dc.SetStderr(cmdCfg.Log)
+
+		cmdCfg.Script.WriteString(commandRequest.Script)
+		cmdCfg.StartAt.WriteString(datetime.Now().Format("YYYY-MM-DD HH:mm:ss"))
+		if len(commandRequest.Environment) > 0 {
+			env := []string{}
+			for k, v := range commandRequest.Environment {
+				env = append(env, fmt.Sprintf("%s=%s", k, v))
+			}
+			cmdCfg.Env.WriteString(strings.Join(env, "\n"))
+		}
 
 		go func() {
+			defer cmdCfg.Log.Close()
+
 			err = dc.Run()
 			if err != nil {
+				cmdCfg.Error.WriteString(err.Error())
+				cmdCfg.FailedAt.WriteString(datetime.Now().Format("YYYY-MM-DD HH:mm:ss"))
+				cmdCfg.Status.WriteString("failure")
 				fmt.Printf("[createCommandAPI] failed to run command: %s\n", err)
+				return
 			}
+
+			cmdCfg.SucceedAt.WriteString(datetime.Now().Format("YYYY-MM-DD HH:mm:ss"))
+			cmdCfg.Status.WriteString("success")
 		}()
 
 		ctx.Success(zoox.H{
@@ -142,8 +171,14 @@ func retrieveCommandLogAPI(cfg *Config) func(ctx *zoox.Context) {
 			return
 		}
 
+		logContent, err := readCommandLog(cfg, id)
+		if err != nil {
+			ctx.Fail(err, 500, fmt.Sprintf("failed to read command log: %s", err))
+			return
+		}
+
 		ctx.Success(zoox.H{
-			"log": command.Log,
+			"log": logContent,
 		})
 	}
 }
@@ -155,6 +190,8 @@ func retrieveCommandLogSSEAPI(cfg *Config) func(ctx *zoox.Context) {
 			ctx.Fail(fmt.Errorf("id is required"), 400, "id is required")
 			return
 		}
+		var offset int64
+		logEventID := 0
 
 		for {
 			select {
@@ -170,7 +207,21 @@ func retrieveCommandLogSSEAPI(cfg *Config) func(ctx *zoox.Context) {
 					return
 				}
 
-				ctx.SSE().Event("message", command.Log.Pop().String())
+				chunk, nextOffset, err := readCommandLogChunk(cfg, id, offset)
+				if err != nil {
+					ctx.Fail(err, 500, fmt.Sprintf("failed to stream command log: %s", err))
+					return
+				}
+				offset = nextOffset
+				if chunk != "" {
+					logEventID++
+					logEvent := dcommand.Log{
+						ID:            logEventID,
+						Log:           chunk,
+						TimestampInMS: datetime.Now().UnixMilli(),
+					}
+					ctx.SSE().Event("message", logEvent.String())
+				}
 
 				time.Sleep(1 * time.Second)
 			}
@@ -229,8 +280,14 @@ func getLatestCommandLogAPI(cfg *Config) func(ctx *zoox.Context) {
 		for _, id := range commandsIDList.Iterator() {
 			if command := commandsMap.Get(id); command != nil {
 				if command.IsRunning() {
+					logContent, err := readCommandLog(cfg, id)
+					if err != nil {
+						ctx.Fail(err, 500, fmt.Sprintf("failed to read command log: %s", err))
+						return
+					}
+
 					ctx.Success(zoox.H{
-						"log": command.Log,
+						"log": logContent,
 					})
 					return
 				}
@@ -260,6 +317,8 @@ func getLatestCommandLogSSEAPI(cfg *Config) func(ctx *zoox.Context) {
 			ctx.Fail(nil, 404, "command current is not running")
 			return
 		}
+		var offset int64
+		logEventID := 0
 
 		for {
 			select {
@@ -279,10 +338,84 @@ func getLatestCommandLogSSEAPI(cfg *Config) func(ctx *zoox.Context) {
 					return
 				}
 
-				ctx.SSE().Event("message", command.Log.Pop().String())
+				chunk, nextOffset, err := readCommandLogChunk(cfg, commandID, offset)
+				if err != nil {
+					ctx.Fail(err, 500, fmt.Sprintf("failed to stream command log: %s", err))
+					return
+				}
+				offset = nextOffset
+				if chunk != "" {
+					logEventID++
+					logEvent := dcommand.Log{
+						ID:            logEventID,
+						Log:           chunk,
+						TimestampInMS: datetime.Now().UnixMilli(),
+					}
+					ctx.SSE().Event("message", logEvent.String())
+				}
 
 				time.Sleep(1 * time.Second)
 			}
 		}
 	}
+}
+
+func readCommandLog(cfg *Config, id string) (string, error) {
+	logPath := getCommandLogPath(cfg, id)
+	if !fs.IsExist(logPath) {
+		return "", nil
+	}
+
+	content, err := os.ReadFile(logPath)
+	if err != nil {
+		return "", err
+	}
+
+	return string(content), nil
+}
+
+func readCommandLogChunk(cfg *Config, id string, offset int64) (string, int64, error) {
+	logPath := getCommandLogPath(cfg, id)
+	if !fs.IsExist(logPath) {
+		return "", offset, nil
+	}
+
+	f, err := os.Open(logPath)
+	if err != nil {
+		return "", offset, err
+	}
+	defer f.Close()
+
+	if _, err := f.Seek(offset, io.SeekStart); err != nil {
+		return "", offset, err
+	}
+
+	var chunk strings.Builder
+	buf := make([]byte, 32*1024)
+	nextOffset := offset
+	for {
+		n, err := f.Read(buf)
+		if n > 0 {
+			chunk.Write(buf[:n])
+			nextOffset += int64(n)
+		}
+
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return "", offset, err
+		}
+	}
+
+	return chunk.String(), nextOffset, nil
+}
+
+func getCommandLogPath(cfg *Config, id string) string {
+	metadataDir := cfg.MetadataDir
+	if metadataDir == "" {
+		metadataDir = "/tmp/agent/metadata"
+	}
+
+	return fmt.Sprintf("%s/%s/log", metadataDir, id)
 }
