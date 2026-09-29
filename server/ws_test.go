@@ -15,7 +15,6 @@ import (
 	cst "github.com/go-zoox/logger/components/transport"
 	"github.com/go-zoox/logger/transport/console"
 	"github.com/go-zoox/websocket"
-	gwebsocket "github.com/gorilla/websocket"
 )
 
 type logCapture struct {
@@ -118,9 +117,15 @@ func TestWsCloseAfterCommandConfigFailure(t *testing.T) {
 	httpServer := httptest.NewServer(wsServer)
 	defer httpServer.Close()
 
-	client, _, err := gwebsocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(httpServer.URL, "http"), nil)
+	client, err := websocket.NewClient(func(opt *websocket.ClientOption) {
+		opt.Addr = "ws" + strings.TrimPrefix(httpServer.URL, "http")
+	})
 	if err != nil {
-		t.Fatalf("failed to dial: %v", err)
+		t.Fatalf("failed to create websocket client: %v", err)
+	}
+
+	if err := client.Connect(); err != nil {
+		t.Fatalf("failed to connect: %v", err)
 	}
 
 	// wait for the connection to be established, so that the state is set
@@ -134,8 +139,8 @@ func TestWsCloseAfterCommandConfigFailure(t *testing.T) {
 		t.Fatalf("failed to marshal command: %v", err)
 	}
 
-	if err := client.WriteMessage(gwebsocket.TextMessage, append([]byte{entities.MessageCommand}, payload...)); err != nil {
-		t.Fatalf("failed to write command: %v", err)
+	if err := client.SendTextMessage(append([]byte{entities.MessageCommand}, payload...)); err != nil {
+		t.Fatalf("failed to send command: %v", err)
 	}
 
 	// the command config fails to be created, so the command never runs
