@@ -59,8 +59,6 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 
 	return func(server websocket.Server) {
 		server.OnError(func(conn conn.Conn, err error) error {
-			fmt.Println("on error:", err)
-
 			if conn != nil {
 				logger.Errorf("[ws][id: %s] Error: %s", conn.ID(), err)
 			} else {
@@ -85,14 +83,12 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 			// if client disconnect, we want to canncel the command running
 			//	which means we want to kill the command when client disconnect
 			if data.Cmd != nil && data.Cmd.IsRunning() {
-				data.Cmd.State.IsKilledByClose = true
+				data.Cmd.MarkKilledByClose()
 
 				// // wait 1 second
 				// time.Sleep(1 * time.Second)
 
-				if data.Cmd != nil {
-					data.Cmd.Cancel()
-				}
+				data.Cmd.Cancel()
 			}
 
 			return nil
@@ -391,14 +387,21 @@ func createWsService(cfg *Config) func(server websocket.Server) {
 
 					logger.Infof("[ws][id: %s] command succeed to run .", dc.ID)
 				case entities.MessageCommandCancelRequest:
+					if connState.Cmd == nil {
+						logger.Errorf("[ws][id: %s] no command to cancel", conn.ID())
+						conn.WriteTextMessage([]byte{entities.MessageCommandCancelResponse})
+						conn.WriteTextMessage([]byte{entities.MessageCommandExitCode, byte(1)})
+						return nil
+					}
+
 					// 更新状态
-					connState.Cmd.State.IsCancelled = true
+					connState.Cmd.MarkCancelled()
 
 					// wait 1 second
 					time.Sleep(1 * time.Second)
 
 					// if command is running, cancel it
-					if connState.Cmd != nil && !connState.Cmd.IsRunning() {
+					if !connState.Cmd.IsRunning() {
 						connState.Cmd.Cancel()
 					}
 					conn.WriteTextMessage([]byte{entities.MessageCommandCancelResponse})

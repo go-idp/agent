@@ -261,19 +261,47 @@ func (c *Command) Cancel() error {
 		return fmt.Errorf("command is not running, please do Run() first")
 	}
 
-	c.State.IsCancelled = true
-	c.State.Status = "cancelled"
+	if c.State != nil {
+		c.State.IsCancelled = true
+		c.State.Status = "cancelled"
+	}
 
 	c.event.Emit("cancel", c.ID)
 
 	return c.cmd.Cancel()
 }
 
+// MarkKilledByClose marks the command as killed by connection close,
+// which is used by Run() to tell a killed command from a failed one.
+func (c *Command) MarkKilledByClose() {
+	if c.State == nil {
+		return
+	}
+
+	c.State.IsKilledByClose = true
+}
+
+// MarkCancelled marks the command as cancelled.
+func (c *Command) MarkCancelled() {
+	if c.State == nil {
+		return
+	}
+
+	c.State.IsCancelled = true
+}
+
 func (c *Command) On(event string, fn func(payload any)) {
 	c.event.On(event, eventemitter.HandleFunc(fn))
 }
 
-// IsRunning returns true if the command is running
+// IsRunning returns true if the command is running.
+//
+// State is nil before Run() is called, e.g. a command which fails to
+// create its config and never runs, so it is treated as not running.
 func (c *Command) IsRunning() bool {
+	if c.State == nil {
+		return false
+	}
+
 	return !c.State.IsCancelled && !c.State.IsCompleted && !c.State.IsError
 }
